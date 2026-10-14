@@ -1,2 +1,5 @@
 .env
 .env.*
+# internal planning, kept out of the public repo
+docs/
+memory.md
