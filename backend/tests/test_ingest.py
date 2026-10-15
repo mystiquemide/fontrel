@@ -37,3 +37,9 @@ def test_ingest_metadata():
 def test_shortage_ids_unique():
     dupes = q("MATCH (s:Shortage) WITH s.id AS id, count(*) AS c WHERE c > 1 RETURN count(id)")[0][0]
     assert dupes == 0
+
+
+def test_word_match_is_whole_word():
+    from ingest.openfda import word_match
+    assert word_match("EPINEPHRINE", "EPINEPHRINE BITARTRATE")
+    assert not word_match("EPINEPHRINE", "NOREPINEPHRINE BITARTRATE")

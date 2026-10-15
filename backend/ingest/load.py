@@ -81,3 +81,55 @@ def load_made_at(g: Graph, rows: list[dict]) -> None:
     """
     for b in _batched(rows):
         g.query(q, {"rows": b})
+
+
+def load_candidate_suppliers(g: Graph, rows: list[dict], weight: float) -> None:
+    """Link DMF holders to every ingredient whose name contains the matched term as a whole word."""
+    from .openfda import word_match
+    names = [r[0] for r in g.query("MATCH (i:Ingredient) RETURN i.name").result_set]
+    for r in rows:
+        r["ingredients"] = [n for n in names if word_match(r["term"], n)]
+    q = """
+    UNWIND $rows AS r
+    MERGE (s:Supplier {name_norm: r.holder_norm})
+    SET s.name = r.holder
+    WITH s, r
+    UNWIND r.ingredients AS iname
+    MATCH (i:Ingredient {name: iname})
+    MERGE (s)-[c:CANDIDATE_SUPPLIER {dmf: r.dmf}]->(i)
+    SET c.subject = r.subject, c.weight = $weight, c.source = 'FDA DMF list'
+    """
+    for b in _batched(rows):
+        g.query(q, {"rows": b, "weight": weight})
+
+
+def equivalence_pairs(products: list[dict]) -> list[dict]:
+    """Same active ingredients, first strength, dosage form and route, different labeler."""
+    groups: dict[tuple, list[dict]] = {}
+    for p in products:
+        if not p["ingredients"]:
+            continue
+        key = (
+            tuple(sorted(i["name"] for i in p["ingredients"])),
+            p["ingredients"][0]["strength"].replace(" ", "").lower(),
+            p["dosage_form"].upper(), p["route"].upper(),
+        )
+        groups.setdefault(key, []).append(p)
+    pairs = []
+    for members in groups.values():
+        for i, a in enumerate(members):
+            for b in members[i + 1:]:
+                if a["labeler"] != b["labeler"]:
+                    pairs.append({"a": a["product_ndc"], "b": b["product_ndc"]})
+    return pairs
+
+
+def load_equivalence(g: Graph, pairs: list[dict]) -> None:
+    q = """
+    UNWIND $rows AS r
+    MATCH (a:Product {product_ndc: r.a}), (b:Product {product_ndc: r.b})
+    MERGE (a)-[e:EQUIVALENT_TO]->(b)
+    SET e.basis = 'same ingredients, strength, form and route'
+    """
+    for b in _batched(pairs):
+        g.query(q, {"rows": b})

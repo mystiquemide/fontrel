@@ -1,4 +1,5 @@
 """openFDA shortages and NDC directory into the supply graph."""
+import re
 from urllib.parse import quote
 
 from fontrel.config import settings
@@ -31,7 +32,12 @@ def fetch_all(endpoint: str, search: str, page: int = 1000) -> list[dict]:
 def matches(names: list[str], terms: list[str]) -> list[str]:
     """Return the curated terms that appear in any of the given ingredient names."""
     up = [n.upper() for n in names]
-    return [t for t in terms if any(t in n for n in up)]
+    return [t for t in terms if any(word_match(t, n) for n in up)]
+
+
+def word_match(term: str, text: str) -> bool:
+    """Whole-word match, so EPINEPHRINE does not match NOREPINEPHRINE."""
+    return re.search(rf"(?<![A-Z]){re.escape(term)}(?![A-Z])", text.upper()) is not None
 
 
 def product_ndc_from_package(package_ndc: str) -> str:

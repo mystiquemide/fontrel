@@ -1,0 +1,43 @@
+from fontrel import graph
+from ingest.load import equivalence_pairs
+
+
+def q(cypher, params=None):
+    return graph.supply().query(cypher, params or {}).result_set
+
+
+def test_candidate_weight_below_spl():
+    # DMF edges are weak evidence: weight set, and strictly below the implicit 1.0 of SPL MADE_AT edges
+    max_w = q("MATCH ()-[c:CANDIDATE_SUPPLIER]->() RETURN max(c.weight)")[0][0]
+    assert max_w is not None and max_w < 1.0
+    assert q("MATCH ()-[m:MADE_AT]->() WHERE m.source <> 'SPL' RETURN count(m)")[0][0] == 0
+
+
+def test_candidate_edges_cite_dmf():
+    assert q("MATCH ()-[c:CANDIDATE_SUPPLIER]->() WHERE c.dmf IS NULL OR c.dmf = '' RETURN count(c)")[0][0] == 0
+    assert q("MATCH ()-[c:CANDIDATE_SUPPLIER]->() RETURN count(c)")[0][0] > 100
+
+
+def test_no_norepinephrine_false_match():
+    bad = q("""MATCH ()-[c:CANDIDATE_SUPPLIER]->(i:Ingredient)
+    WHERE i.name STARTS WITH 'NOREPINEPHRINE' AND NOT c.subject CONTAINS 'NOREPINEPHRINE' RETURN count(c)""")
+    assert bad[0][0] == 0
+
+
+def test_equivalence_pairs_cross_labeler_only():
+    prods = [
+        {"product_ndc": "1", "labeler": "A", "dosage_form": "INJECTION", "route": "IV",
+         "ingredients": [{"name": "X", "strength": "1 mg/mL"}]},
+        {"product_ndc": "2", "labeler": "B", "dosage_form": "INJECTION", "route": "IV",
+         "ingredients": [{"name": "X", "strength": "1mg/mL"}]},
+        {"product_ndc": "3", "labeler": "A", "dosage_form": "INJECTION", "route": "IV",
+         "ingredients": [{"name": "X", "strength": "1 mg/mL"}]},
+        {"product_ndc": "4", "labeler": "C", "dosage_form": "TABLET", "route": "ORAL",
+         "ingredients": [{"name": "X", "strength": "1 mg/mL"}]},
+    ]
+    pairs = {(p["a"], p["b"]) for p in equivalence_pairs(prods)}
+    assert pairs == {("1", "2"), ("2", "3")}
+
+
+def test_equivalence_loaded():
+    assert q("MATCH ()-[e:EQUIVALENT_TO]->() RETURN count(e)")[0][0] > 1000

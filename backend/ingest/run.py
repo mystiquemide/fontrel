@@ -6,7 +6,7 @@ import yaml
 
 from fontrel import graph
 
-from . import dailymed, load, openfda
+from . import dailymed, dmf, load, openfda
 
 
 def terms() -> list[str]:
@@ -35,6 +35,16 @@ def main(reset: bool = False) -> None:
     load.load_made_at(g, made_at)
     load.stamp_ingest(g, "dailymed_spl", len(made_at))
     print(f"made_at rows: {len(made_at)}")
+
+    suppliers = dmf.dmf_rows(t)
+    load.load_candidate_suppliers(g, suppliers, dmf.WEIGHT)
+    load.stamp_ingest(g, "fda_dmf_list", len(suppliers))
+    print(f"candidate supplier rows: {len(suppliers)}")
+
+    pairs = load.equivalence_pairs(products)
+    load.load_equivalence(g, pairs)
+    load.stamp_ingest(g, "equivalence", len(pairs))
+    print(f"equivalence pairs: {len(pairs)}")
 
 
 if __name__ == "__main__":
