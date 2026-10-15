@@ -81,6 +81,10 @@ def load_made_at(g: Graph, rows: list[dict]) -> None:
     """
     for b in _batched(rows):
         g.query(q, {"rows": b})
+    # Plain projection of manufacturing-only links, so graph algorithms (which filter by
+    # relationship type, not property) ignore packing, relabeling and testing sites.
+    g.query("""MATCH (p:Product)-[m:MADE_AT {operation:'MANUFACTURE'}]->(s:Site)
+               MERGE (p)-[:MANUFACTURED_AT]->(s)""")
 
 
 def load_candidate_suppliers(g: Graph, rows: list[dict], weight: float) -> None:
