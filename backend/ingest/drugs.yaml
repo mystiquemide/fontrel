@@ -1,0 +1,42 @@
+# Curated ingredient set. Chosen from the ingredients with the most current
+# openFDA shortage records (Oct 15, 2026), weighted toward hospital injectables.
+# Matching is a substring match against openFDA active ingredient names.
+ingredients:
+  - BUPIVACAINE
+  - ROPIVACAINE
+  - LIDOCAINE
+  - DEXMEDETOMIDINE
+  - EPINEPHRINE
+  - FUROSEMIDE
+  - CARBOPLATIN
+  - KETOROLAC
+  - MIDAZOLAM
+  - HYDROMORPHONE
+  - ROCURONIUM
+  - MORPHINE
+  - METHYLPREDNISOLONE
+  - ETOMIDATE
+  - DEXAMETHASONE
+  - FENTANYL
+  - ATROPINE
+  - LORAZEPAM
+  - SODIUM BICARBONATE
+  - DOPAMINE
+  - DOBUTAMINE
+  - METHOTREXATE
+  - HEPARIN
+  - CLINDAMYCIN
+  - AZACITIDINE
+  - REMIFENTANIL
+  - IFOSFAMIDE
+  - CEFOTAXIME
+  - CEFAZOLIN
+  - VANCOMYCIN
+  - LISDEXAMFETAMINE
+  - METHYLPHENIDATE
+  - DEXTROAMPHETAMINE
+  - CLONAZEPAM
+  - RIFAMPIN
+  - PROMETHAZINE
+  - LIRAGLUTIDE
+  - QUINAPRIL
