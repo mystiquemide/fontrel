@@ -6,7 +6,7 @@ import yaml
 
 from fontrel import graph
 
-from . import load, openfda
+from . import dailymed, load, openfda
 
 
 def terms() -> list[str]:
@@ -30,6 +30,11 @@ def main(reset: bool = False) -> None:
     linked = load.load_shortages(g, shortages)
     load.stamp_ingest(g, "openfda_shortages", len(shortages))
     print(f"shortages: {len(shortages)} current, {linked} linked to a product")
+
+    made_at = dailymed.made_at_rows(products)
+    load.load_made_at(g, made_at)
+    load.stamp_ingest(g, "dailymed_spl", len(made_at))
+    print(f"made_at rows: {len(made_at)}")
 
 
 if __name__ == "__main__":

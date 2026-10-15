@@ -68,3 +68,16 @@ def stamp_ingest(g: Graph, source: str, records: int) -> None:
         "MERGE (m:IngestRun {source: $source}) SET m.at = $at, m.records = $records",
         {"source": source, "at": datetime.now(timezone.utc).isoformat(timespec="seconds"), "records": records},
     )
+
+
+def load_made_at(g: Graph, rows: list[dict]) -> None:
+    q = """
+    UNWIND $rows AS r
+    MATCH (p:Product {product_ndc: r.product_ndc})
+    MERGE (s:Site {name_norm: r.duns})
+    SET s.name = r.name, s.duns = r.duns, s.country = r.country
+    MERGE (p)-[m:MADE_AT {operation: r.operation}]->(s)
+    SET m.setid = r.setid, m.source = 'SPL'
+    """
+    for b in _batched(rows):
+        g.query(q, {"rows": b})
