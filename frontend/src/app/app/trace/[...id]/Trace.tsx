@@ -9,6 +9,7 @@ import { Banner } from "./Banner";
 import { MemoryList } from "./Memory";
 import { PathChips } from "./PathChips";
 import { Reasoning } from "./Reasoning";
+import { SmallGraph } from "./SmallGraph";
 
 type Header = { kind: "loading" } | { kind: "missing" } | { kind: "error" } | { kind: "ready"; s: Shortage };
 
@@ -154,6 +155,16 @@ export function Trace() {
           </div>
           <Reasoning steps={stepList} answer={done} running={running} />
         </div>
+      )}
+      {head.kind === "ready" && (
+        <SmallGraph
+          tenant={h}
+          shortageId={shortageId}
+          totals={{
+            exposed: new Set(stepList.find((x) => x.tool === "find_site_exposure")?.data.map((r) => r.product_ndc)).size || undefined,
+            subs: stepList.find((x) => x.tool === "find_substitutes")?.rows,
+          }}
+        />
       )}
     </section>
   );
