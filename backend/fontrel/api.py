@@ -1,6 +1,7 @@
 """HTTP API. Run: uvicorn fontrel.api:app --port 8000"""
 import hashlib
 import json
+import os
 import queue
 import threading
 from datetime import datetime, timezone
@@ -15,7 +16,19 @@ from . import agent, cache, graph, tools
 from .config import settings
 
 app = FastAPI(title="Fontrel", version="0.1.0")
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["GET", "POST"], allow_headers=["*"])
+# The app calls the API through its own /api rewrite, so browsers only need these origins for direct calls.
+ORIGINS = [o.strip() for o in os.getenv("CORS_ORIGINS", "http://localhost:3100").split(",") if o.strip()]
+app.add_middleware(CORSMiddleware, allow_origins=ORIGINS, allow_methods=["GET", "POST"], allow_headers=["content-type"])
+
+# At most this many fresh (model-backed) traces run at once, and never two for the same shortage.
+MAX_FRESH = int(os.getenv("MAX_FRESH_TRACES", "2"))
+_fresh_slots = threading.BoundedSemaphore(MAX_FRESH)
+_running: set[tuple] = set()
+_running_lock = threading.Lock()
+
+
+class Cancelled(Exception):
+    pass
 
 
 def _tenant(tenant_id: str) -> str:
@@ -41,8 +54,9 @@ def health():
                             status_code=503)
     g = graph.supply()
     counts = dict(g.query("MATCH (n) RETURN labels(n)[0], count(*)").result_set)
-    runs = [{"source": r[0], "records": r[1], "at": r[2]} for r in
-            g.query("MATCH (m:IngestRun) RETURN m.source, m.records, m.at ORDER BY m.source").result_set]
+    runs = [{"source": r[0], "records": r[1], "at": r[2], "fetched": r[3]} for r in
+            g.query("MATCH (m:IngestRun) RETURN m.source, m.records, m.at, coalesce(m.fetched, m.at) "
+                    "ORDER BY m.source").result_set]
     return {"ok": True, "falkordb": True, "llm_configured": bool(settings.llm_api_key),
             "model": settings.llm_model, "counts": counts, "ingest": runs, "tenants": graph.list_tenants()}
 
@@ -76,8 +90,16 @@ def trace(req: TraceRequest):
     sid = _shortage(tenant, req.shortage_id)
     model = settings.llm_model_fast if req.fast else settings.llm_model
     events: queue.Queue = queue.Queue()
+    cancelled = threading.Event()
+    key = (tenant, sid, model)
+
+    def on_step(step):
+        if cancelled.is_set():
+            raise Cancelled()  # the browser left, so stop before the next model call
+        events.put(("step", step))
 
     def work():
+        slot = False
         try:
             saved = None if req.fresh else cache.get(tenant, sid, model)
             if saved:
@@ -85,20 +107,46 @@ def trace(req: TraceRequest):
                     events.put(("step", step))
                 out = saved
             else:
-                out = agent.run_trace(tenant, sid, model, on_step=lambda s: events.put(("step", s)))
+                with _running_lock:
+                    if key in _running:
+                        events.put(("error", {"error": "busy", "message": "This shortage is already being traced. Try again in a few seconds."}))
+                        return
+                    if not _fresh_slots.acquire(blocking=False):
+                        events.put(("error", {"error": "busy", "message": "Fontrel is running other traces right now. Try again in a few seconds."}))
+                        return
+                    slot = True
+                    _running.add(key)
+                out = agent.run_trace(tenant, sid, model, on_step=on_step)
                 out["replayed"] = False
                 cache.put(tenant, out)
             events.put(("answer", {k: v for k, v in out.items() if k != "steps"}))
+        except Cancelled:
+            pass
         except Exception as e:  # graph down mid-trace and similar
             events.put(("error", {"error": f"{type(e).__name__}: {e}"}))
-        events.put(None)
+        finally:
+            if slot:
+                with _running_lock:
+                    _running.discard(key)
+                _fresh_slots.release()
+            events.put(None)
 
     threading.Thread(target=work, daemon=True).start()
 
     def stream():
-        while (item := events.get()) is not None:
-            kind, data = item
-            yield f"event: {kind}\ndata: {json.dumps(data, default=str)}\n\n"
+        try:
+            while True:
+                try:
+                    item = events.get(timeout=15)
+                except queue.Empty:
+                    yield ": keepalive\n\n"  # keeps proxies from closing a slow model call
+                    continue
+                if item is None:
+                    break
+                kind, data = item
+                yield f"event: {kind}\ndata: {json.dumps(data, default=str)}\n\n"
+        finally:
+            cancelled.set()
 
     return StreamingResponse(stream(), media_type="text/event-stream",
                              headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})

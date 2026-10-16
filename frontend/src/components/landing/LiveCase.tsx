@@ -71,9 +71,9 @@ function Chip({ label, title: t, sub, tone = "ink" }: { label: string; title: st
 }
 
 const STATUS = {
-  independent: { text: "Independent plant", dot: "bg-clear", color: "text-clear-deep" },
-  unknown: { text: "No site on file", dot: "bg-unknown", color: "text-ink-3" },
-  shares_site: { text: "Shares the plant", dot: "bg-exposed", color: "text-exposed" },
+  independent: { text: "No shared plant", dot: "bg-clear", color: "text-clear-deep" },
+  unknown: { text: "Overlap unknown", dot: "bg-unknown", color: "text-ink-3" },
+  shares_site: { text: "Shares a plant", dot: "bg-exposed", color: "text-exposed" },
 } as const;
 
 export function LiveCase() {
@@ -85,7 +85,7 @@ export function LiveCase() {
     {
       n: "01",
       title: "Trace the plant",
-      text: "Every FDA label lists where the drug is made. Fontrel follows the shortage to that plant.",
+      text: "Many FDA labels list the plants where the drug is made. Fontrel follows the shortage to those plants.",
       fragment: ready && (
         <div className="flex flex-col gap-2">
           <Chip label="Shortage" title={state!.data!.anchor.shortage} sub="FDA notice" />
@@ -97,7 +97,7 @@ export function LiveCase() {
     {
       n: "02",
       title: "Find what else is exposed",
-      text: "Other drugs made at the same plant are at risk, even with no shortage notice yet.",
+      text: "Other drugs made at the same plant share that exposure, even with no shortage notice yet.",
       fragment: ready && (
         <ul>
           {d!.exposed.slice(0, 3).map((n) => (
@@ -117,8 +117,8 @@ export function LiveCase() {
     },
     {
       n: "03",
-      title: "Choose a safe substitute",
-      text: "Equivalents made at a different plant come first. Your team's past decisions are remembered.",
+      title: "Review candidate alternatives",
+      text: "Candidates with no shared plant on record come first. Your team's past rejections move down.",
       fragment: ready && (
         <ul>
           {d!.subs.slice(0, 3).map((n) => {
@@ -192,7 +192,7 @@ export function LiveCase() {
               </div>
             </div>
             <p className="mt-10 max-w-[60ch] text-[19px] text-ink-2">
-              {d!.hidden.length === 1 ? "This product has" : "Neither of these has"} a shortage notice. {d!.hidden.length === 1 ? "It is" : "They are"} made at the same plant, under{" "}
+              {d!.hidden.length === 1 ? "This product has" : "Neither of these has"} a shortage notice in today&rsquo;s FDA list. {d!.hidden.length === 1 ? "It is" : "They are"} made at the same plant, under{" "}
               {d!.hidden.length === 1 ? "another company's name" : "other companies' names"}.
             </p>
             <p className="mt-3 text-[15px] text-ink-3">

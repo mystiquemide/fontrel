@@ -24,8 +24,8 @@ export function HeroStats() {
   const c = state.counts;
   const stats = [
     { n: c.Product, label: "Products traced", src: "openFDA NDC" },
-    { n: c.Shortage, label: "Current FDA shortages", src: "openFDA" },
-    { n: c.Site, label: "Manufacturing plants", src: "DailyMed" },
+    { n: c.Shortage, label: "Current FDA shortage records", src: "openFDA" },
+    { n: c.Site, label: "Plants on FDA labels", src: "DailyMed" },
   ];
   return (
     <dl className="grid grid-cols-3 divide-x divide-canvas/25 motion-safe:animate-[chip_400ms_ease-out]">

@@ -25,10 +25,10 @@ export function Hero() {
         <div className="lg:ml-auto lg:max-w-[600px]">
           <p className="label !text-canvas/75">Drug shortage response for hospital pharmacy</p>
           <h1 className="h1 mt-5">
-            See the shortage <span className="block italic text-clay">behind the shortage.</span>
+            See the shortage <span className="block italic text-[#F2B896]">behind the shortage.</span>
           </h1>
           <p className="mt-6 max-w-[52ch] text-[19px] leading-relaxed text-canvas/90">
-            When a drug goes short, Fontrel traces it to the plant that makes it, finds the other drugs on your shelves made there, and shows substitutes made somewhere else.
+            When a drug goes short, Fontrel traces it to the plant that makes it, finds the other drugs on your shelves made there, and lists candidate alternatives made somewhere else.
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3">
             <Link href="/app" className="rounded-full bg-clay px-6 py-3.5 font-medium text-canvas hover:bg-canvas hover:text-ink">

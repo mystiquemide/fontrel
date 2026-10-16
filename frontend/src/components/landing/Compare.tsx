@@ -2,7 +2,7 @@ const ROWS: [string, boolean][] = [
   ["Tells you a drug is short", true],
   ["Shows the plant that makes it", false],
   ["Finds your other drugs made at that plant", false],
-  ["Checks a substitute is made at a different plant", false],
+  ["Checks a candidate shares no recorded plant", false],
   ["Remembers what your team chose last time", false],
   ["Shows the query behind every answer", false],
 ];

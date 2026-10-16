@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { getJSON, MONTHS } from "@/lib/api";
 
-type Ingest = { source: string; records: number; at: string };
+type Ingest = { source: string; records: number; at: string; fetched?: string };
 
 const SOURCES: Record<string, { name: string; unit: string; href: string }> = {
   openfda_shortages: { name: "openFDA drug shortages", unit: "current records", href: "https://open.fda.gov/apis/drug/drugshortages/" },
@@ -67,7 +67,10 @@ export function DataSources() {
                     <p className="text-ink-2">
                       <span className="font-display text-[24px] text-ink">{r.records.toLocaleString("en-US")}</span> {s.unit}
                     </p>
-                    <p className="font-mono text-[13px] text-ink-3">Loaded {day(r.at)}</p>
+                    <p className="font-mono text-[13px] text-ink-3">
+                      Downloaded {day(r.fetched ?? r.at)}
+                      {r.fetched && day(r.fetched) !== day(r.at) ? `, loaded ${day(r.at)}` : ""}
+                    </p>
                   </li>
                 );
               })}

@@ -97,20 +97,33 @@ def _ndcs_in(results: list[tools.ToolResult]) -> set[str]:
     return seen
 
 
+REQUIRED = ("get_shortage", "find_site_exposure", "find_substitutes", "recall_memory")
+
+
 def validate(answer: dict, results: list[tools.ToolResult]) -> tuple[dict, list[str]]:
-    """Drop any product the tools never returned. Returns (clean answer, dropped NDCs)."""
-    known = _ndcs_in(results)
+    """Check each answer list against the tool that owns it. An exposed product must come from
+    find_site_exposure, a substitute from find_substitutes (never the shortage product itself), and a
+    substitute's status is always the server's, not the model's. Returns (clean answer, dropped NDCs)."""
+    if not isinstance(answer, dict):
+        answer = {}
+    rows = {r.tool: r.rows for r in results}
+    exposed_ok = {r["product_ndc"] for r in rows.get("find_site_exposure", [])}
+    subs = {r["product_ndc"]: r for r in rows.get("find_substitutes", [])}
+    short = {r.get("product_ndc") for r in rows.get("get_shortage", [])}
     dropped = []
-    for key in ("exposed", "substitutes"):
-        kept = []
-        for item in answer.get(key) or []:
-            if isinstance(item, dict) and item.get("product_ndc") in known:
-                kept.append(item)
-            else:
-                dropped.append(str(item.get("product_ndc") if isinstance(item, dict) else item))
-        answer[key] = kept
-    answer.setdefault("summary", "")
-    answer.setdefault("memory", [])
+
+    def keep(item, allowed):
+        ndc = item.get("product_ndc") if isinstance(item, dict) else None
+        if ndc in allowed and ndc not in short:
+            return True
+        dropped.append(str(ndc if ndc is not None else item))
+        return False
+
+    answer["exposed"] = [i for i in answer.get("exposed") or [] if keep(i, exposed_ok)]
+    answer["substitutes"] = [{**i, "status": subs[i["product_ndc"]]["status"]}
+                             for i in answer.get("substitutes") or [] if keep(i, subs)]
+    answer["summary"] = answer.get("summary") if isinstance(answer.get("summary"), str) else ""
+    answer["memory"] = [m for m in answer.get("memory") or [] if isinstance(m, str)]
     return answer, dropped
 
 
@@ -129,9 +142,9 @@ def _parse_json(text: str) -> dict:
 KEEP = {
     "get_shortage": ["shortage", "company", "product_ndc", "product", "ingredients", "sites"],
     "find_site_exposure": ["product_ndc", "product", "labeler", "via_site", "already_in_shortage"],
-    "find_substitutes": ["product_ndc", "labeler", "status", "on_formulary", "in_shortage"],
+    "find_substitutes": ["product_ndc", "labeler", "status", "on_formulary", "in_shortage", "prior_decision"],
     "recall_memory": ["episode_label", "action", "substitute_ndc", "substitute_labeler", "reason",
-                      "outcome", "outcome_days"],
+                      "outcome", "outcome_days", "synthetic"],
 }
 
 
@@ -220,20 +233,26 @@ def run_trace(tenant_id: str, shortage_id: str, model: str | None = None, on_ste
     except (LLMUnavailable, ValueError, json.JSONDecodeError) as e:
         degraded_reason = str(e)[:300]
 
+    # The prompt asks for these steps, but the code guarantees them: a model that answers early never
+    # leaves a trace without exposure, substitutes or memory.
+    by_tool = {}
+    completed_by_server = []
+    for name in REQUIRED:
+        existing = next((r for r in results if r.tool == name), None)
+        if existing is None:
+            existing = call_tool(tenant_id, name, {}, shortage_id)
+            record(name, {}, existing, "fallback" if degraded_reason else "required")
+            completed_by_server.append(name)
+        by_tool[name] = existing
     if degraded_reason:
-        by_tool = {}
-        for name in ("get_shortage", "find_site_exposure", "find_substitutes", "recall_memory"):
-            existing = next((r for r in results if r.tool == name), None)
-            if existing is None:
-                existing = call_tool(tenant_id, name, {}, shortage_id)
-                record(name, {}, existing, "fallback")
-            by_tool[name] = existing
         answer = degraded_answer(by_tool)
 
     answer, dropped = validate(answer, results)
     return {"tenant": tenant_id, "shortage_id": shortage_id, "model": model,
             "degraded": degraded_reason is not None, "degraded_reason": degraded_reason,
-            "dropped_ndcs": dropped, "steps": steps, "answer": answer,
+            "dropped_ndcs": dropped, "completed_by_server": completed_by_server,
+            "complete": all(any(s["tool"] == n for s in steps) for n in REQUIRED),
+            "steps": steps, "answer": answer,
             "elapsed_s": round(time.perf_counter() - t0, 2)}
 
 

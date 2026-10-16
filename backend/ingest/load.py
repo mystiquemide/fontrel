@@ -1,4 +1,5 @@
 """Write ingest rows into the supply graph. All writes are idempotent MERGEs."""
+import re
 from datetime import datetime, timezone
 
 from falkordb import Graph
@@ -60,13 +61,17 @@ def load_shortages(g: Graph, rows: list[dict]) -> int:
     linked = 0
     for b in _batched(rows):
         linked += g.query(q, {"rows": b}).result_set[0][0]
+    # a shortage that is no longer on the current list is removed, so a resolved one never lingers
+    g.query("MATCH (s:Shortage) WHERE NOT s.id IN $ids DETACH DELETE s", {"ids": [r["id"] for r in rows]})
     return linked
 
 
-def stamp_ingest(g: Graph, source: str, records: int) -> None:
+def stamp_ingest(g: Graph, source: str, records: int, fetched: str | None = None) -> None:
+    """at is when the graph was built from the source; fetched is when the source files were downloaded."""
+    now = datetime.now(timezone.utc).isoformat(timespec="seconds")
     g.query(
-        "MERGE (m:IngestRun {source: $source}) SET m.at = $at, m.records = $records",
-        {"source": source, "at": datetime.now(timezone.utc).isoformat(timespec="seconds"), "records": records},
+        "MERGE (m:IngestRun {source: $source}) SET m.at = $at, m.records = $records, m.fetched = $fetched",
+        {"source": source, "at": now, "records": records, "fetched": fetched or now},
     )
 
 
@@ -107,17 +112,33 @@ def load_candidate_suppliers(g: Graph, rows: list[dict], weight: float) -> None:
         g.query(q, {"rows": b, "weight": weight})
 
 
+def _strength(s: str) -> str:
+    """Normalise a label strength for comparison: '30 mg/1 g' and '30mg/g' compare equal."""
+    return re.sub(r"/1(?=[a-z])", "/", (s or "").replace(" ", "").lower())
+
+
+def strength_signature(p: dict) -> tuple | None:
+    """Every active ingredient with its own strength, order-independent. None if any strength is missing,
+    because a product we cannot fully compare must never be paired."""
+    sig = []
+    for i in p["ingredients"]:
+        st = _strength(i.get("strength", ""))
+        if not st:
+            return None
+        sig.append((i["name"], st))
+    return tuple(sorted(sig))
+
+
 def equivalence_pairs(products: list[dict]) -> list[dict]:
-    """Same active ingredients, first strength, dosage form and route, different labeler."""
+    """Same active ingredients at the same strength each, same dosage form and route, different labeler."""
     groups: dict[tuple, list[dict]] = {}
     for p in products:
         if not p["ingredients"]:
             continue
-        key = (
-            tuple(sorted(i["name"] for i in p["ingredients"])),
-            p["ingredients"][0]["strength"].replace(" ", "").lower(),
-            p["dosage_form"].upper(), p["route"].upper(),
-        )
+        sig = strength_signature(p)
+        if sig is None:
+            continue
+        key = (sig, p["dosage_form"].upper(), p["route"].upper())
         groups.setdefault(key, []).append(p)
     pairs = []
     for members in groups.values():
@@ -129,11 +150,12 @@ def equivalence_pairs(products: list[dict]) -> list[dict]:
 
 
 def load_equivalence(g: Graph, pairs: list[dict]) -> None:
+    g.query("MATCH ()-[e:EQUIVALENT_TO]->() DELETE e")  # rebuilt from scratch so a fixed rule leaves no stale pairs
     q = """
     UNWIND $rows AS r
     MATCH (a:Product {product_ndc: r.a}), (b:Product {product_ndc: r.b})
     MERGE (a)-[e:EQUIVALENT_TO]->(b)
-    SET e.basis = 'same ingredients, strength, form and route'
+    SET e.basis = 'same ingredients and strength of each, same form and route'
     """
     for b in _batched(pairs):
         g.query(q, {"rows": b})

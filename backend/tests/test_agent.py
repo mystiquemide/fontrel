@@ -138,3 +138,36 @@ def test_malformed_tool_call_retries_once(monkeypatch):
         raise AssertionError("expected LLMUnavailable")
     except llm.LLMUnavailable:
         assert len(calls) == 1
+
+
+def test_validate_checks_each_list_against_its_own_tool():
+    from fontrel import agent, tools
+    short = tools.ToolResult("get_shortage", [{"product_ndc": "A"}])
+    exp = tools.ToolResult("find_site_exposure", [{"product_ndc": "E"}])
+    subs = tools.ToolResult("find_substitutes", [{"product_ndc": "S", "status": "unknown"}])
+    answer = {"exposed": [{"product_ndc": "E"}, {"product_ndc": "S"}],
+              "substitutes": [{"product_ndc": "A", "status": "independent"},
+                              {"product_ndc": "S", "status": "independent"}]}
+    clean, dropped = agent.validate(answer, [short, exp, subs])
+    assert [i["product_ndc"] for i in clean["exposed"]] == ["E"]
+    assert clean["substitutes"] == [{"product_ndc": "S", "status": "unknown"}]  # server status wins
+    assert set(dropped) == {"S", "A"}
+
+
+def test_early_answer_still_runs_required_tools(monkeypatch):
+    from fontrel import agent
+    shortage = sid()
+
+    class Call:
+        id = "c1"
+        def __init__(self):
+            self.function = type("F", (), {"name": "submit_answer", "arguments": '{"summary":"x","exposed":[],"substitutes":[],"memory":[]}'})()
+        def model_dump(self):
+            return {}
+    reply = type("R", (), {"tool_calls": [Call()], "content": ""})()
+    monkeypatch.setattr(agent, "chat", lambda *a, **k: type("X", (), {"choices": [type("C", (), {"message": reply})()]})())
+    out = agent.run_trace("mercy", shortage, "m")
+    tools_run = [s["tool"] for s in out["steps"]]
+    assert out["complete"] and not out["degraded"]
+    assert {"find_site_exposure", "find_substitutes", "recall_memory"} <= set(tools_run)
+    assert set(out["completed_by_server"]) == {"find_site_exposure", "find_substitutes", "recall_memory"}

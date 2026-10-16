@@ -14,7 +14,7 @@ export function Footer() {
         <div className="flex items-center gap-3">
           <Mark size={24} />
           <span>Built for Graph Hacks on FalkorDB, 2026.</span>
-          <a className="link" href="https://github.com/mystiquemide/graph-hack">
+          <a className="link" href="https://github.com/mystiquemide/fontrel">
             GitHub
           </a>
           <ScrollLink className="link" to="sources">

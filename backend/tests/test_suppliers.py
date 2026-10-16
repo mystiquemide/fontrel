@@ -50,3 +50,18 @@ def test_dmf_alias_for_fda_misspelling():
     n = q("""MATCH (:Supplier)-[:CANDIDATE_SUPPLIER]->(i:Ingredient)
              WHERE i.name STARTS WITH 'LISDEXAMFETAMINE' RETURN count(*)""")[0][0]
     assert n > 0
+
+
+def test_equivalence_compares_every_ingredient_strength():
+    from ingest.load import equivalence_pairs
+
+    def prod(ndc, labeler, ings):
+        return {"product_ndc": ndc, "labeler": labeler, "dosage_form": "CREAM", "route": "RECTAL",
+                "ingredients": [{"name": n, "strength": st} for n, st in ings]}
+    # real FDA pair from the audit: same lidocaine, different hydrocortisone strength
+    a = prod("59088-771", "PureTek", [("LIDOCAINE HYDROCHLORIDE", "30 mg/g"), ("HYDROCORTISONE ACETATE", "10 mg/g")])
+    b = prod("13925-165", "Seton", [("LIDOCAINE HYDROCHLORIDE", "30 mg/g"), ("HYDROCORTISONE ACETATE", "5 mg/g")])
+    same = prod("1-1", "Other", [("HYDROCORTISONE ACETATE", "10 mg/1 g"), ("LIDOCAINE HYDROCHLORIDE", "30mg/g")])
+    blank = prod("2-2", "NoStrength", [("LIDOCAINE HYDROCHLORIDE", ""), ("HYDROCORTISONE ACETATE", "10 mg/g")])
+    pairs = {frozenset(p.values()) for p in equivalence_pairs([a, b, same, blank])}
+    assert pairs == {frozenset({"59088-771", "1-1"})}

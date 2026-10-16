@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { DecisionError, shortDate, type MemoryRow } from "@/lib/api";
 
 type Action = "approved" | "rejected";
@@ -17,6 +17,30 @@ export function Decide({
   const [by, setBy] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [justSaved, setJustSaved] = useState(false);
+  const firstField = useRef<HTMLTextAreaElement>(null);
+  const box = useRef<HTMLDivElement>(null);
+  const lastAction = useRef<Action | null>(null);
+  const statusLine = useRef<HTMLParagraphElement>(null);
+  const returnFocus = useRef(false);
+
+  useEffect(() => {
+    if (open) firstField.current?.focus();
+    else if (returnFocus.current) {
+      returnFocus.current = false;
+      // the buttons were replaced while the form was open, so find the new one. After a save it is
+      // disabled (that decision is made), so the saved message takes focus instead.
+      requestAnimationFrame(() => {
+        const btn = box.current?.querySelector<HTMLButtonElement>(`button[data-action="${lastAction.current}"]`);
+        (btn && !btn.disabled ? btn : statusLine.current)?.focus();
+      });
+    }
+  }, [open]);
+
+  function close() {
+    returnFocus.current = true;
+    setOpen(null);
+  }
 
   async function save() {
     if (!open) return;
@@ -24,8 +48,9 @@ export function Decide({
     setError(null);
     try {
       await onSave(open, reason.trim(), by.trim() || "Pharmacist");
-      setOpen(null);
+      setJustSaved(true);
       setReason("");
+      close();
     } catch (e) {
       setError(e instanceof DecisionError ? e.message : "Your decision did not save. Check your connection and select Save decision again.");
     } finally {
@@ -34,9 +59,10 @@ export function Decide({
   }
 
   return (
-    <div className="mt-3">
+    <div ref={box} className="mt-3">
       {current && !open && (
-        <p className={`text-[14px] ${current.action === "approved" ? "text-clear-deep" : "text-ink-2"}`}>
+        <p ref={statusLine} tabIndex={-1} role="status" className={`text-[14px] focus:outline-none ${current.action === "approved" ? "text-clear-deep" : "text-ink-2"}`}>
+          {justSaved ? "Decision saved. " : ""}
           {current.action === "approved" ? "Approved" : "Rejected"} by {current.by ?? "Pharmacist"}
           {current.at ? `, ${shortDate(current.at)}` : ""}
           {current.reason ? <span className="text-ink-3"> · &ldquo;{current.reason}&rdquo;</span> : null}
@@ -47,7 +73,12 @@ export function Decide({
           {(["approved", "rejected"] as const).map((a) => (
             <button
               key={a}
-              onClick={() => setOpen(a)}
+              data-action={a}
+              onClick={() => {
+                lastAction.current = a;
+                setJustSaved(false);
+                setOpen(a);
+              }}
               disabled={current?.action === a}
               className={
                 a === "approved"
@@ -67,10 +98,11 @@ export function Decide({
           }}
           className="mt-2 rounded-[12px] border-[1.5px] border-line bg-canvas p-4"
         >
-          <p className="font-medium">{open === "approved" ? "Approve this substitute" : "Reject this substitute"}</p>
+          <p className="font-medium">{open === "approved" ? "Approve this candidate" : "Reject this candidate"}</p>
           <label className="mt-3 block">
             <span className="label">Reason (optional)</span>
             <textarea
+              ref={firstField}
               value={reason}
               onChange={(e) => setReason(e.target.value.slice(0, 500))}
               rows={2}
@@ -87,7 +119,11 @@ export function Decide({
               className="mt-1 w-full rounded-[6px] border-[1.5px] border-line bg-canvas px-3 py-2 text-[15px] placeholder:text-ink-3 focus:border-clay focus:outline-none"
             />
           </label>
-          {error && <p className="mt-3 text-[14px] text-exposed">{error}</p>}
+          {error && (
+            <p role="alert" className="mt-3 text-[14px] text-exposed">
+              {error}
+            </p>
+          )}
           <div className="mt-4 flex gap-2">
             <button
               type="submit"
@@ -96,7 +132,7 @@ export function Decide({
             >
               {saving ? "Saving" : "Save decision"}
             </button>
-            <button type="button" onClick={() => setOpen(null)} className="link px-2 text-[15px] text-ink-2">
+            <button type="button" onClick={close} className="link px-2 text-[15px] text-ink-2">
               Cancel
             </button>
           </div>

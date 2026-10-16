@@ -39,7 +39,7 @@ export function NavShell({
         <div className="ml-auto flex min-w-0 items-center gap-3">{right}</div>
       </div>
       {items.length > 0 && (
-        <nav aria-label="Main" className={`wrap flex gap-6 overflow-x-auto border-t py-1 text-[15px] md:hidden ${dark ? "border-canvas/20" : "border-line"}`}>
+        <nav aria-label="Main" className={`wrap flex gap-6 overflow-x-auto border-t py-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden text-[15px] md:hidden ${dark ? "border-canvas/20" : "border-line"}`}>
           {items.map((i) => (
             <span key={i.key} className="shrink-0">
               {i.node(`inline-block py-1.5 ${link(i.active)} ${i.active ? "underline decoration-clay underline-offset-4" : ""}`)}

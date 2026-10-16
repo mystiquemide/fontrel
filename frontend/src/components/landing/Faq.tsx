@@ -1,23 +1,23 @@
 const QA: [string, string][] = [
   [
     "Does Fontrel tell me what to use instead?",
-    "It proposes substitutes and shows why each one is safe or not. A pharmacist approves or rejects every one. Fontrel never chooses a drug or a dose.",
+    "No. It lists candidate alternatives with the same ingredients and strengths, and shows which plants each one is made at. They are not confirmed therapeutic equivalents. A pharmacist approves or rejects every one, and Fontrel never chooses a drug or a dose.",
   ],
   [
     "Where does the plant information come from?",
     "From the establishment section of each FDA drug label on DailyMed, which lists the plants that make, pack and label the product.",
   ],
   [
-    "What does “No site on file” mean?",
-    "The label lists no manufacturing plant, so Fontrel cannot show the substitute is made somewhere independent. It says so instead of guessing.",
+    "What does “Plant overlap unknown” mean?",
+    "One of the two labels lists no manufacturing plant, so Fontrel cannot tell whether the products share one. It says so instead of guessing.",
   ],
   [
-    "Is my hospital's data shared?",
-    "No. Each hospital has its own graph. One hospital never sees another hospital's formulary or decisions.",
+    "Is my hospital's data kept separate?",
+    "Each hospital's formulary and decisions live in their own graph, and the agent can only read the hospital it was started for. In this demo both hospitals are synthetic and anyone can switch between them. A real deployment would add sign-in so each team sees only its own hospital.",
   ],
   [
     "What runs underneath?",
-    "A FalkorDB graph of products, plants, suppliers and shortages, and an AI agent that can only read it. The only write is a pharmacist's approve or reject.",
+    "A FalkorDB graph of products, plants, suppliers and shortages, and an AI agent that can only read it. The only write is a pharmacist's approve or reject. If the AI model is unavailable, the same graph queries still run.",
   ],
 ];
 

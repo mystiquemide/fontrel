@@ -96,7 +96,7 @@ export function Inbox() {
             <>
               <p className="label">Synthetic hospital · {state.tenant.formulary_items} formulary items</p>
               <h1 className="h1 mt-4">
-                {state.shortages.length} current FDA shortages{" "}
+                {state.shortages.length} current FDA shortage records{" "}
                 <span className="em">touch your formulary.</span>
               </h1>
               <p className="mt-4 text-[19px] text-ink-2">{state.tenant.name}</p>

@@ -141,7 +141,7 @@ export async function postDecision(body: {
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body),
   });
-  if (res.status === 422) throw new DecisionError("This product is not an equivalent of the shortage drug, so it can't be saved as a substitute.");
+  if (res.status === 422) throw new DecisionError("This product is not a candidate alternative for this shortage, so it can't be saved.");
   if (!res.ok) throw new Error(`${res.status}`);
   return res.json();
 }

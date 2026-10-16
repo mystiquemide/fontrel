@@ -43,14 +43,30 @@ export function Trace() {
     return () => ctl.abort();
   }, [loadRecall]);
 
-  const decisions = useMemo(
-    () => new Map((live?.rows ?? []).filter((r) => r.episode === live?.episode).map((r) => [r.substitute_ndc, r] as [string, MemoryRow])),
-    [live],
-  );
+  // decisions the server confirmed in this visit, kept even if the history refresh after them fails
+  const [saved, setSaved] = useState<{ key: string; rows: Record<string, MemoryRow> }>({ key: "", rows: {} });
+  const [historyFailed, setHistoryFailed] = useState<string | null>(null);
+  const [decidedInRun, setDecidedInRun] = useState<string | null>(null);
+
+  const decisions = useMemo(() => {
+    const m = new Map((live?.rows ?? []).filter((r) => r.episode === live?.episode).map((r) => [r.substitute_ndc, r] as [string, MemoryRow]));
+    if (saved.key === headerKey) for (const [ndc, r] of Object.entries(saved.rows)) if (!m.has(ndc) || (m.get(ndc)!.at ?? "") < (r.at ?? "")) m.set(ndc, r);
+    return m;
+  }, [live, saved, headerKey]);
 
   async function decide(ndc: string, action: "approved" | "rejected", reason: string, by: string) {
-    await postDecision({ tenant: h, shortage_id: shortageId, substitute_ndc: ndc, action, reason, by });
-    await loadRecall();
+    // a failure here means the decision was not saved, and the form says so
+    const res = await postDecision({ tenant: h, shortage_id: shortageId, substitute_ndc: ndc, action, reason, by });
+    const row = { episode: res.episode, decision: res.decision, action, substitute_ndc: ndc, reason, by, at: res.at } as MemoryRow;
+    setSaved((p) => ({ key: headerKey, rows: { ...(p.key === headerKey ? p.rows : {}), [ndc]: row } }));
+    setDecidedInRun(runKey);
+    // the decision is saved; a failed history refresh is reported separately and can be retried
+    try {
+      await loadRecall();
+      setHistoryFailed(null);
+    } catch {
+      setHistoryFailed(headerKey);
+    }
   }
   const head: Header = header?.key === headerKey ? header.value : { kind: "loading" };
   const stepList = steps.key === runKey ? steps.list : [];
@@ -73,17 +89,29 @@ export function Trace() {
   useEffect(() => {
     if (head.kind !== "ready") return;
     const ctl = new AbortController();
+    let ended = false;
     streamTrace(
       { tenant: h, shortage_id: shortageId, fresh: run.fresh },
       (e) => {
         if (e.kind === "step") setSteps((p) => ({ key: runKey, list: [...(p.key === runKey ? p.list : []), e.data] }));
-        else if (e.kind === "answer") setAnswer({ key: runKey, value: e.data });
-        else setFailure({ key: runKey, message: "The trace stopped before it finished. Run it again." });
+        else if (e.kind === "answer") {
+          ended = true;
+          setAnswer({ key: runKey, value: e.data });
+        } else {
+          ended = true;
+          const busy = (e.data as { error: string; message?: string }).message;
+          setFailure({ key: runKey, message: busy ?? "The trace stopped before it finished. Run it again." });
+        }
       },
       ctl.signal,
-    ).catch((e) => {
-      if (e.name !== "AbortError") setFailure({ key: runKey, message: "Fontrel cannot reach its graph database right now. Run it again." });
-    });
+    )
+      .then(() => {
+        // the connection closed without a final answer or error, so leave the running state with a retry
+        if (!ended) setFailure({ key: runKey, message: "The trace ended before it finished. The results so far are shown below. Run it again." });
+      })
+      .catch((e) => {
+        if (e.name !== "AbortError") setFailure({ key: runKey, message: "Fontrel cannot reach its graph database right now. Run it again." });
+      });
     return () => ctl.abort();
   }, [head.kind, h, shortageId, run, runKey]);
 
@@ -136,6 +164,36 @@ export function Trace() {
 
       <PathChips steps={stepList} running={running} />
 
+      <p className="sr-only" role="status" aria-live="polite">
+        {running ? `Tracing, ${stepList.length} graph steps so far` : done ? "Trace finished" : failed ? failed : ""}
+      </p>
+
+      {stepList.length > 0 && (
+        <nav aria-label="On this page" className="mt-6 flex flex-wrap gap-2 text-[15px]">
+          {[
+            { id: "exposed", label: "Exposed", n: new Set(stepList.find((x) => x.tool === "find_site_exposure")?.data.map((r) => r.product_ndc)).size },
+            { id: "candidates", label: "Candidates", n: stepList.find((x) => x.tool === "find_substitutes")?.rows },
+            { id: "memory", label: "Past decisions", n: (live?.rows ?? stepList.find((x) => x.tool === "recall_memory")?.data ?? []).length },
+            { id: "how", label: "How Fontrel got here" },
+          ].map((j) => (
+            <a key={j.id} href={`#${j.id}`} onClick={(e) => { e.preventDefault(); document.getElementById(j.id)?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" }); }}
+              className="rounded-full border-[1.5px] border-line px-4 py-2 hover:border-clay">
+              {j.label}
+              {typeof j.n === "number" && <span className="ml-1.5 font-mono text-[13px] text-ink-3">{j.n}</span>}
+            </a>
+          ))}
+        </nav>
+      )}
+
+      {historyFailed === headerKey && (
+        <div role="status" className="mt-6 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-[20px] bg-panel p-6 text-ink-2">
+          Your decision is saved, but the decision history did not refresh.
+          <button className="link py-1.5 text-ink" onClick={() => loadRecall().then(() => setHistoryFailed(null), () => setHistoryFailed(headerKey))}>
+            Refresh history
+          </button>
+        </div>
+      )}
+
       {failed && (
         <div className="mt-6 rounded-[20px] bg-panel p-6 text-ink-2">
           {failed}{" "}
@@ -153,7 +211,7 @@ export function Trace() {
             <SubstituteList steps={stepList} running={running} decisions={decisions} onDecide={decide} />
             <MemoryList steps={stepList} running={running} live={live?.rows ?? null} />
           </div>
-          <Reasoning steps={stepList} answer={done} running={running} />
+          <Reasoning steps={stepList} answer={done} running={running} stale={decidedInRun === runKey} />
         </div>
       )}
       {head.kind === "ready" && (

@@ -110,10 +110,11 @@ def find_ingredient_exposure(tenant_id: str, shortage_id: str) -> ToolResult:
 
 
 def find_substitutes(tenant_id: str, shortage_id: str) -> ToolResult:
-    """Q3. Equivalent products, each classified against the failing manufacturing site:
-    shares_site   - made at a site the shortage product is made at
-    independent   - has known manufacturing sites and none are shared
-    unknown       - no manufacturing site on file, independence cannot be shown"""
+    """Q3. Equivalent products, each compared with the shortage product's recorded manufacturing sites:
+    shares_site   - made at a site the shortage product is also made at
+    independent   - both products have recorded manufacturing sites and none overlap
+    unknown       - either product has no manufacturing site on file, so overlap cannot be ruled out
+    Rows also carry this hospital's last decision on each candidate, which moves rejected ones down."""
     run = _Run("find_substitutes")
     formulary = set(formulary_ndcs(tenant_id))
     rows = run.q(graph.supply(), """
@@ -121,17 +122,42 @@ def find_substitutes(tenant_id: str, shortage_id: str) -> ToolResult:
         OPTIONAL MATCH (p)-[:MANUFACTURED_AT]->(bad:Site)<-[:MANUFACTURED_AT]-(alt)
         OPTIONAL MATCH (alt)-[am:MADE_AT {operation: 'MANUFACTURE'}]->(own:Site)
         OPTIONAL MATCH (alt)<-[:AFFECTS]-(altsh:Shortage)
+        OPTIONAL MATCH (alt)-[ac:CONTAINS]->(ai:Ingredient)
         RETURN DISTINCT alt.product_ndc AS product_ndc, alt.generic_name AS product, alt.labeler AS labeler,
+               alt.dosage_form AS dosage_form, alt.route AS route, alt.spl_set_id AS label_setid,
+               collect(DISTINCT {name: ai.name, strength: ac.strength}) AS ingredients,
                collect(DISTINCT bad.name) AS shared_sites,
                collect(DISTINCT {site: own.name, setid: am.setid}) AS own_sites,
                count(DISTINCT altsh) > 0 AS in_shortage""", {"sid": shortage_id})
+    src = run.q(graph.supply(), """
+        MATCH (s:Shortage {id: $sid})-[:AFFECTS]->(p:Product)
+        OPTIONAL MATCH (p)-[:MANUFACTURED_AT]->(site:Site)
+        RETURN count(DISTINCT site) AS source_sites""", {"sid": shortage_id})
+    source_known = bool(src and src[0]["source_sites"])
+    prior = {r["substitute_ndc"]: r for r in run.q(graph.tenant(tenant_id), """
+        MATCH (d:Decision)
+        WITH d.substitute_ndc AS substitute_ndc, d ORDER BY d.at DESC
+        WITH substitute_ndc, collect(d)[0] AS last
+        RETURN substitute_ndc, last.action AS action, last.reason AS reason, last.outcome AS outcome,
+               last.outcome_days AS outcome_days, last.at AS at""", {})}
     order = {"independent": 0, "unknown": 1, "shares_site": 2}
     for r in rows:
         r["own_sites"] = [o for o in r["own_sites"] if o.get("site")]
-        r["status"] = "shares_site" if r["shared_sites"] else ("independent" if r["own_sites"] else "unknown")
+        if r["shared_sites"]:
+            r["status"] = "shares_site"
+        elif r["own_sites"] and source_known:
+            r["status"] = "independent"
+        else:
+            r["status"] = "unknown"
+        r["source_sites_known"] = source_known
         r["on_formulary"] = r["product_ndc"] in formulary
-    rows.sort(key=lambda r: (order[r["status"]], r["in_shortage"], not r["on_formulary"], r["labeler"]))
-    return run.done(rows)
+        r["prior_decision"] = prior.get(r["product_ndc"])
+    rejected = lambda r: bool(r["prior_decision"] and r["prior_decision"]["action"] == "rejected")
+    approved = lambda r: bool(r["prior_decision"] and r["prior_decision"]["action"] == "approved")
+    rows.sort(key=lambda r: (order[r["status"]], rejected(r), r["in_shortage"], not r["on_formulary"],
+                             not approved(r), r["labeler"]))
+    note = "" if source_known else "the shortage product has no manufacturing site on file, so no candidate can be shown as independent"
+    return run.done(rows, note)
 
 
 def rank_source_concentration(limit: int = 10) -> ToolResult:

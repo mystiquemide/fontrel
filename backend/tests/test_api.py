@@ -125,7 +125,7 @@ def test_replay_flagged(monkeypatch, cleanup):
         if on_step:
             on_step(step)
         return {"tenant": tenant, "shortage_id": shortage_id, "model": model, "degraded": False,
-                "degraded_reason": None, "dropped_ndcs": [], "steps": [step],
+                "degraded_reason": None, "dropped_ndcs": [], "steps": [step], "complete": True,
                 "answer": {"summary": "s", "exposed": [], "substitutes": [], "memory": []}, "elapsed_s": 0.1}
     monkeypatch.setattr(agent, "run_trace", fake_run)
     body = {"tenant": "mercy", "shortage_id": sid}
@@ -194,3 +194,56 @@ def test_subgraph_marks_exposed_shortage_status():
     exposed = [n for n in _sub()["nodes"] if n.get("role") == "exposed"]
     assert exposed and all(isinstance(n["in_shortage"], bool) for n in exposed)
     assert any(not n["in_shortage"] and n["labeler"] != "Eugia US LLC" for n in exposed)
+
+
+def test_incomplete_trace_not_cached_and_reload_invalidates(monkeypatch):
+    from fontrel import cache
+    sid = anchor()
+    g = graph.tenant("mercy")
+    g.query("MATCH (t:Trace) DETACH DELETE t")
+    base = {"tenant": "mercy", "shortage_id": sid, "model": "m", "degraded": False, "steps": [],
+            "answer": {}, "elapsed_s": 0.1}
+    cache.put("mercy", {**base, "complete": False})
+    assert cache.get("mercy", sid, "m") is None
+    cache.put("mercy", {**base, "complete": True})
+    assert cache.get("mercy", sid, "m") is not None
+    # a data reload changes the supply version, so the saved trace is not replayed
+    monkeypatch.setattr(cache, "supply_version", lambda: "reloaded")
+    assert cache.get("mercy", sid, "m") is None
+    g.query("MATCH (t:Trace) DETACH DELETE t")
+
+
+def test_second_fresh_trace_for_same_shortage_is_refused(monkeypatch):
+    import threading
+    from fontrel import api
+    sid = anchor()
+    gate = threading.Event()
+
+    def slow_run(tenant, shortage_id, model, on_step=None):
+        gate.wait(5)
+        return {"tenant": tenant, "shortage_id": shortage_id, "model": model, "degraded": True, "steps": [],
+                "answer": {}, "elapsed_s": 0}
+    monkeypatch.setattr(agent, "run_trace", slow_run)
+    api._running.add(("mercy", sid, api.settings.llm_model))
+    try:
+        ev = _events(c.post("/api/trace", json={"tenant": "mercy", "shortage_id": sid, "fresh": True}))
+        assert ev[-1][0] == "error" and ev[-1][1]["error"] == "busy"
+    finally:
+        api._running.discard(("mercy", sid, api.settings.llm_model))
+        gate.set()
+
+
+def test_rejecting_a_candidate_moves_it_down_next_time(cleanup):
+    from fontrel import tools
+    sid = anchor()
+    before = tools.find_substitutes("mercy", sid).rows
+    top = before[0]
+    peers = [r["product_ndc"] for r in before if r["status"] == top["status"] and r["product_ndc"] != top["product_ndc"]]
+    assert peers, "needs a second candidate with the same status"
+    d = c.post("/api/decisions", json={"tenant": "mercy", "shortage_id": sid, "substitute_ndc": top["product_ndc"],
+                                       "action": "rejected", "reason": "test"}).json()
+    cleanup.append((d["decision"], d["episode"]))
+    after = [r["product_ndc"] for r in tools.find_substitutes("mercy", sid).rows]
+    assert after.index(top["product_ndc"]) > max(after.index(p) for p in peers)
+    row = next(r for r in tools.find_substitutes("mercy", sid).rows if r["product_ndc"] == top["product_ndc"])
+    assert row["prior_decision"]["action"] == "rejected"

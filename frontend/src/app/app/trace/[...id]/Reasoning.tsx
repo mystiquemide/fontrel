@@ -7,7 +7,7 @@ const TOOL_NAMES: Record<string, string> = {
   get_shortage: "Read the shortage notice",
   find_site_exposure: "Find products made at the same plant",
   find_ingredient_exposure: "Find products with the same ingredient",
-  find_substitutes: "Find equivalent products",
+  find_substitutes: "Find candidate alternatives",
   rank_source_concentration: "Rank plants by dependence",
   exposure_clusters: "Group connected plants",
   recall_memory: "Recall your past decisions",
@@ -49,11 +49,11 @@ function StepRow({ step }: { step: Step }) {
   );
 }
 
-export function Reasoning({ steps, answer, running }: { steps: Step[]; answer: TraceAnswer | null; running: boolean }) {
+export function Reasoning({ steps, answer, running, stale }: { steps: Step[]; answer: TraceAnswer | null; running: boolean; stale?: boolean }) {
   const summary = answer?.answer.summary as string | undefined;
   const model = answer?.model.replace(/^openai\//, "");
   return (
-    <aside className="rounded-[20px] bg-panel p-6 md:p-8 lg:sticky lg:top-6">
+    <aside id="how" className="scroll-mt-24 rounded-[20px] bg-panel p-6 md:p-8 lg:sticky lg:top-6">
       <h2 className="font-display text-[28px] leading-tight">How Fontrel got here</h2>
       <p className="mt-2 text-[15px] text-ink-2">Every answer comes from these graph queries. Open any one to see the Cypher.</p>
       <ol className="mt-6">
@@ -71,6 +71,9 @@ export function Reasoning({ steps, answer, running }: { steps: Step[]; answer: T
           <p className="mt-3 text-ink-2">No written summary this time. The lists come straight from the graph.</p>
         ) : (
           <p className="mt-3 font-display text-[21px] leading-snug">{summary}</p>
+        )}
+        {answer && stale && (
+          <p className="mt-3 text-[14px] text-ink-2">This summary was written before your latest decision. Run a fresh trace to include it.</p>
         )}
         {answer && (
           <p className="mt-4 font-mono text-[13px] text-ink-3">

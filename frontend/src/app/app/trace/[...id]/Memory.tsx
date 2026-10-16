@@ -15,7 +15,7 @@ export function MemoryList({ steps, running, live }: { steps: Step[]; running: b
   const step = steps.find((s) => s.tool === "recall_memory");
   const rows = live ?? (step ? (step.data as Row[]) : null);
   return (
-    <section>
+    <section id="memory" className="scroll-mt-24">
       <h2 className="font-display text-[28px] leading-tight">Your hospital&rsquo;s memory</h2>
       <div className="mt-6">
         {!rows ? (
@@ -24,7 +24,7 @@ export function MemoryList({ steps, running, live }: { steps: Step[]; running: b
           </p>
         ) : rows.length === 0 ? (
           <p className="border-t border-line py-6 text-ink-2">
-            No past decisions for this drug yet. When your team approves or rejects a substitute, Fontrel uses it on the next trace.
+            No past decisions for this drug yet. When your team approves or rejects a candidate, Fontrel recalls it and lists past rejections lower on the next trace.
           </p>
         ) : (
           <ul>

@@ -2,7 +2,7 @@
 
 **See the shortage behind the shortage.**
 
-When a drug goes short, a hospital pharmacy usually finds out one product at a time. Fontrel follows the shortage to the plant that makes the drug, finds the other products on your formulary made at that same plant, and proposes substitutes made somewhere else. A pharmacist approves or rejects each one, and Fontrel remembers that decision the next time the same drug is short.
+When a drug goes short, a hospital pharmacy usually finds out one product at a time. Fontrel follows the shortage to the plant listed on the drug's FDA label, finds the other products on your formulary made at that same plant, and lists candidate alternatives with no plant in common. A pharmacist approves or rejects each one, and Fontrel remembers that decision the next time the same drug is short.
 
 It runs on a [FalkorDB](https://www.falkordb.com/) graph built from public FDA data.
 
@@ -12,7 +12,7 @@ It runs on a [FalkorDB](https://www.falkordb.com/) graph built from public FDA d
 
 On October 16, 2026, Eugia US bupivacaine injection (NDC 55150-249) was on the FDA shortage list. Its FDA label lists one manufacturing plant: Eugia Pharma Specialities Limited (DUNS 650498244).
 
-That same plant also makes products sold under other company names, including Aurobindo ketorolac and McKesson SKY heparin. Neither had a shortage notice. A shortage list shows you the bupivacaine. The graph shows you the ketorolac and heparin too.
+That same plant also makes products sold under other company names, including Aurobindo ketorolac and McKesson SKY heparin. Neither had a shortage notice. That isn't proof they will run short, but it is shared exposure worth a look. A shortage list shows you the bupivacaine. The graph shows you the ketorolac and heparin too.
 
 You can check this yourself: open the [ketorolac label on DailyMed](https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=007a4da5-d794-416c-94b3-6ee9e7842c52) and look at the establishment section.
 
@@ -22,8 +22,8 @@ You can check this yourself: open the [ketorolac label on DailyMed](https://dail
 
 1. **Trace the plant.** Reads the shortage, then walks from the product to the plant listed on its FDA label.
 2. **Find what else is exposed.** Finds every product on the hospital's formulary made at that plant, flagging the ones that have no shortage notice yet.
-3. **Propose substitutes.** Finds equivalent products (same ingredient, strength, form and route, from another company) and sorts them into three groups: made at an independent plant, made at the same plant, or no plant on file.
-4. **Remember decisions.** A pharmacist approves or rejects a substitute. The decision is saved in that hospital's own graph and recalled on the next trace for the same ingredient.
+3. **List candidate alternatives.** Finds products from other companies with the same ingredients at the same strengths, the same form and the same route. Each candidate shows that evidence and its label link, and falls into one of three groups: no shared plant on record, shares a plant, or plant overlap unknown (when either label lists no plant). These are candidates for review, not confirmed therapeutic equivalents.
+4. **Remember decisions.** A pharmacist approves or rejects a candidate. The decision is saved in that hospital's own graph. On the next trace, candidates the team rejected before are listed lower, past approvals are shown with their outcome, and the agent recalls them.
 5. **Show its work.** Every step lists the Cypher query it ran, how many rows came back, and how long it took.
 
 The app has four screens: a shortage inbox, the trace for one shortage, the hospital's decision memory, and a ranking of the plants that the most products depend on.
@@ -55,12 +55,12 @@ Run these from a terminal. On Windows, use WSL or Git Bash. The one Windows-spec
 **1. Get the code and start FalkorDB**
 
 ```bash
-git clone https://github.com/mystiquemide/graph-hack.git
-cd graph-hack
+git clone https://github.com/mystiquemide/fontrel.git
+cd fontrel
 docker compose up -d
 ```
 
-FalkorDB now runs on port 6379. Its browser UI is at http://localhost:3000 if you want to look at the graph directly.
+FalkorDB now runs on port 6379, reachable only from your machine. Its browser UI is at http://localhost:3000 if you want to look at the graph directly.
 
 **2. Add your settings**
 
@@ -88,7 +88,7 @@ python -m ingest.run
 python -m ingest.synth
 ```
 
-`ingest.run` downloads current FDA data and builds the supply graph. It takes about two minutes and caches the files in `data/raw`, so later runs are faster. `ingest.synth` creates the two synthetic hospitals.
+`ingest.run` downloads current FDA data and builds the supply graph. It takes about two minutes and caches the files in `data/raw`, so later runs are faster. To pull fresh data later, run `python -m ingest.run --refresh`. Shortages that have left the FDA list are removed on each load. `ingest.synth` creates the two synthetic hospitals.
 
 **5. Start the API**
 
@@ -101,7 +101,7 @@ Leave this running. Check it at http://localhost:8000/api/health.
 **6. Start the app** (in a second terminal)
 
 ```bash
-cd graph-hack/frontend
+cd fontrel/frontend
 npm install
 npm run dev
 ```
@@ -126,7 +126,7 @@ cd backend
 python -m pytest -q
 ```
 
-58 tests run against the live graph. They cover data loading, every query, tenant isolation, the agent's guardrails and the API.
+65 tests run against the live graph. They cover data loading, strength matching, every query, tenant separation, the agent's guardrails, the trace cache and the API.
 
 ## How it works
 
@@ -138,9 +138,11 @@ Browser (Next.js) ──▶ FastAPI ──▶ agent loop ──▶ read-only gra
 
 - **Backend:** Python and FastAPI. Traces stream to the browser step by step as server-sent events.
 - **Agent:** a plain tool-calling loop on an OpenAI-compatible API, using Groq's `openai/gpt-oss-120b`. The model chooses which graph tools to call. The tools are read-only, and the hospital is bound on the server, so the model can't query another hospital's graph.
-- **Answer checks:** every product the model names is checked against the graph, and any NDC the graph didn't return is dropped.
-- **No model? No problem:** if the model is unavailable, the same tools run in a fixed order and the answer is built straight from the graph.
-- **Cache:** finished traces are saved in the hospital's graph and replayed until that hospital's decisions change.
+- **Required steps:** the exposure, candidate and memory queries always run. If the model answers early, the server runs whatever it skipped before the trace is complete.
+- **Answer checks:** each list in the model's answer is checked against the query that owns it. An exposed product must come from the exposure query and a candidate from the candidate query, and a candidate's status always comes from the graph, never from the model. Anything else is dropped. The written summary is labeled as the model's.
+- **No model? No problem:** if the model is unavailable, the same queries run in a fixed order and the answer is built straight from the graph.
+- **Cache:** complete traces are saved in the hospital's graph and replayed until that hospital's decisions change or the data is reloaded.
+- **Limits:** at most two fresh traces run at once (`MAX_FRESH_TRACES`), never two for the same shortage, and a trace stops if the browser leaves.
 - **Frontend:** Next.js and Tailwind.
 
 ## Graph data model
@@ -159,7 +161,7 @@ Fontrel uses one shared graph for public data and one graph per hospital. The ho
 | `Site` | `duns`, `name` | DailyMed label establishments |
 | `Supplier` | `name` | FDA Drug Master File list |
 | `Shortage` | `id`, `generic_name`, `company`, `availability`, `updated` | openFDA drug shortages |
-| `IngestRun` | `source`, `records`, `at` | Written by each load |
+| `IngestRun` | `source`, `records`, `fetched`, `at` | When each source was downloaded and when the graph was built from it |
 
 | Relationship | From → To | Meaning |
 |---|---|---|
@@ -168,7 +170,7 @@ Fontrel uses one shared graph for public data and one graph per hospital. The ho
 | `MADE_AT` | Product → Site | Plant on the FDA label, with `operation` (manufacture, pack, label and so on) and the label `setid` |
 | `MANUFACTURED_AT` | Product → Site | The `MADE_AT` links where the operation is manufacture. Used by the graph algorithms. |
 | `AFFECTS` | Shortage → Product | The shortage notice covers this product |
-| `EQUIVALENT_TO` | Product ↔ Product | Same ingredients, strength, form and route, different company |
+| `EQUIVALENT_TO` | Product ↔ Product | Same ingredients at the same strength each, same form and route, different company. Products with any missing strength are never paired. |
 | `CANDIDATE_SUPPLIER` | Supplier → Ingredient | A Drug Master File for the ingredient, with `dmf` number and weight 0.3. This is a registration, not confirmed supply. |
 
 ### Hospital graphs: `tenant_<id>`
@@ -214,20 +216,34 @@ RETURN i.name AS ingredient, supplier_count, sample_dmfs,
                          labeler: other.labeler}) AS formulary_products
 ```
 
-**Q3. Substitutes, checked against the failing plant**
+**Q3. Candidate alternatives, compared with the shortage product's plants**
 
 ```cypher
 MATCH (s:Shortage {id: $sid})-[:AFFECTS]->(p:Product)-[:EQUIVALENT_TO]-(alt:Product)
 OPTIONAL MATCH (p)-[:MANUFACTURED_AT]->(bad:Site)<-[:MANUFACTURED_AT]-(alt)
 OPTIONAL MATCH (alt)-[am:MADE_AT {operation: 'MANUFACTURE'}]->(own:Site)
 OPTIONAL MATCH (alt)<-[:AFFECTS]-(altsh:Shortage)
+OPTIONAL MATCH (alt)-[ac:CONTAINS]->(ai:Ingredient)
 RETURN DISTINCT alt.product_ndc AS product_ndc, alt.generic_name AS product, alt.labeler AS labeler,
+       alt.dosage_form AS dosage_form, alt.route AS route, alt.spl_set_id AS label_setid,
+       collect(DISTINCT {name: ai.name, strength: ac.strength}) AS ingredients,
        collect(DISTINCT bad.name) AS shared_sites,
        collect(DISTINCT {site: own.name, setid: am.setid}) AS own_sites,
        count(DISTINCT altsh) > 0 AS in_shortage
 ```
 
-Each substitute is then labeled **shares the plant** (a shared plant was found), **independent plant** (it has its own manufacturing plant and none is shared) or **no site on file** (its label lists no plant, so independence can't be shown).
+Two small follow-up queries supply the rest. One counts the shortage product's recorded plants. The other reads the hospital's last decision on each candidate:
+
+```cypher
+// tenant graph
+MATCH (d:Decision)
+WITH d.substitute_ndc AS substitute_ndc, d ORDER BY d.at DESC
+WITH substitute_ndc, collect(d)[0] AS last
+RETURN substitute_ndc, last.action AS action, last.reason AS reason, last.outcome AS outcome,
+       last.outcome_days AS outcome_days, last.at AS at
+```
+
+Each candidate is then labeled **shares a plant** (a shared plant was found), **no shared plant on record** (both products list manufacturing plants and none overlap) or **plant overlap unknown** (either label lists no plant). Within each group, candidates the hospital rejected before are listed lower.
 
 **Q4. Plants ranked by dependence** (PageRank)
 
@@ -281,7 +297,7 @@ The only write in the product is a pharmacist's decision, `POST /api/decisions`.
 
 | Method | Path | What it returns |
 |---|---|---|
-| GET | `/api/health` | Database status, node counts and the date of each data load |
+| GET | `/api/health` | Database status, node counts, and when each source was downloaded and loaded |
 | GET | `/api/tenants` | The hospitals |
 | GET | `/api/shortages?tenant=` | Current FDA shortages on that hospital's formulary |
 | POST | `/api/trace` | A trace, streamed step by step |
@@ -299,11 +315,11 @@ The only write in the product is a pharmacist's decision, `POST /api/decisions`.
 backend/
   fontrel/    API, agent loop, graph tools, trace cache
   ingest/     data loaders for openFDA, DailyMed and the DMF list, plus the synthetic hospitals
-  tests/      58 tests against a live FalkorDB
+  tests/      65 tests against a live FalkorDB
 frontend/
   src/app/        landing page and the app screens
   src/components/ shared header, logo and landing sections
-docker-compose.yml  FalkorDB with append-only persistence
+docker-compose.yml  FalkorDB with append-only persistence, bound to localhost
 ```
 
 ## Data
@@ -321,12 +337,15 @@ Fontrel tracks 38 ingredients that hospitals often see in shortage, including bu
 
 ## Limits
 
-- Fontrel supports a pharmacist's decision. It doesn't choose a drug or a dose.
+- Fontrel supports a pharmacist's decision. It doesn't choose a drug or a dose, and a candidate alternative is not a confirmed therapeutic equivalent. The FDA [Orange Book](https://www.fda.gov/drugs/development-approval-process-drugs/orange-book-preface) sets that bar.
+- A shared plant means shared exposure to review. It doesn't prove the plant caused the shortage or that other products will run short.
+- There is no sign-in. Each hospital's data lives in its own graph and the agent only reads the hospital it was started for, but anyone using this demo can switch hospitals. A real deployment needs sign-in before each hospital's decisions are private.
 - It doesn't forecast shortages. It works from what is filed today.
 - Plant data is only as complete as the FDA labels. Products with no listed plant are shown as "no site on file", never as safe.
 - Drug Master File suppliers are registrations. Fontrel doesn't claim anyone is actively supplying.
 - It doesn't rate countries or regions, because the public data has no reliable country field.
 - Groq's free tier allows about one fresh trace per minute. Saved traces replay instantly.
+- The API allows browser calls only from `http://localhost:3100` by default. Set `CORS_ORIGINS` when you deploy it elsewhere.
 
 Fontrel works at a different layer from supply maps such as the [USP Medicine Supply Map](https://www.usp.org/supply-chain/medicine-supply-map). It takes the plant-level picture down to one hospital's formulary, proposes an action, and remembers what that hospital decided.
 

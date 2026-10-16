@@ -88,3 +88,18 @@ def test_llm_tools_read_only():
     assert set(tools.READ_TOOLS) == {
         "list_formulary_shortages", "get_shortage", "find_site_exposure", "find_ingredient_exposure",
         "find_substitutes", "rank_source_concentration", "exposure_clusters", "recall_memory"}
+
+
+def test_q3_unknown_when_shortage_product_has_no_plant(monkeypatch):
+    from fontrel import tools
+    real_q = tools._Run.q
+
+    def fake_q(self, g, cypher, params):
+        if "count(DISTINCT site) AS source_sites" in cypher:
+            self.queries.append({"graph": "supply", "cypher": cypher, "params": params})
+            return [{"source_sites": 0}]
+        return real_q(self, g, cypher, params)
+    monkeypatch.setattr(tools._Run, "q", fake_q)
+    rows = tools.find_substitutes("mercy", anchor_shortage()).rows
+    assert rows and all(r["status"] != "independent" for r in rows)
+

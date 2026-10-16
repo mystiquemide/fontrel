@@ -142,19 +142,23 @@ export function SourcesPage() {
           {!data ? (
             <div className="h-24 animate-pulse rounded-[20px] bg-panel" />
           ) : data.s.clusters.length === 0 ? (
-            <p className="border-t border-line py-6 text-ink-2">None of this formulary&rsquo;s products have plant data on file.</p>
+            <p className="border-t border-line py-6 text-ink-2">No group of two or more connected plants touches this formulary.</p>
           ) : (
             <ul className="grid gap-4 md:grid-cols-2">
               {data.s.clusters.map((c) => {
                 const sites = [...new Set(c.sites)];
+                const more = c.site_count - sites.length;
                 return (
                   <li key={c.cluster} className="rounded-[20px] bg-panel p-6">
                     <p className="font-display text-[40px] leading-none text-clay">{c.formulary_count}</p>
                     <p className="mt-1 text-ink-2">of your formulary products</p>
                     <p className="label mt-5">
-                      {sites.length} {sites.length === 1 ? "plant" : "plants"}
+                      {c.site_count} {c.site_count === 1 ? "plant" : "plants"}
                     </p>
-                    <p className="mt-1.5 text-[15px] leading-relaxed">{sites.map(title).join(" · ")}</p>
+                    <p className="mt-1.5 text-[15px] leading-relaxed">
+                      {sites.map(title).join(" · ")}
+                      {more > 0 && <span className="text-ink-3"> and {more} more</span>}
+                    </p>
                   </li>
                 );
               })}

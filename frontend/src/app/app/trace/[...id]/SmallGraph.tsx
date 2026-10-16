@@ -164,13 +164,13 @@ export function SmallGraph({
                 <span className="inline-flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full border-2 border-ink" />Shortage</span>
                 <span className="inline-flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-[2px] border-2 border-ink-2" />Plant</span>
                 <span className="inline-flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-exposed" />Exposed</span>
-                <span className="inline-flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-clear" />Independent plant</span>
-                <span className="inline-flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-unknown" />No site on file</span>
+                <span className="inline-flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-clear" />No shared plant on record</span>
+                <span className="inline-flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-unknown" />Plant overlap unknown</span>
               </div>
               <p className="mt-3 text-[14px] text-ink-3">
                 Showing {lay.counts.exposed}
                 {totals.exposed ? ` of ${totals.exposed}` : ""} exposed products and {lay.counts.subs}
-                {totals.subs ? ` of ${totals.subs}` : ""} substitutes, from FalkorDB. The full lists are above.
+                {totals.subs ? ` of ${totals.subs}` : ""} candidates, from FalkorDB. The full lists are above.
               </p>
             </>
           )}

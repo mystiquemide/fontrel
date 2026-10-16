@@ -10,6 +10,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 import time
 
+from . import http
 from .http import RAW, _client
 
 NS = {"v3": "urn:hl7-org:v3"}
@@ -48,7 +49,8 @@ def parse_establishments(xml: str) -> list[dict]:
 
 def establishments_for(setid: str) -> list[dict]:
     path = EXTRACT / f"{setid}.json"
-    if path.exists():
+    if path.exists() and not http.REFRESH:
+        http.note_fetched("dailymed", path)
         return json.loads(path.read_text())
     xml = None
     for attempt in range(4):
@@ -64,6 +66,7 @@ def establishments_for(setid: str) -> list[dict]:
     result = parse_establishments(xml) if xml else []
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(result))
+    http.note_fetched("dailymed", path)
     return result
 
 
