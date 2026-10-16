@@ -179,7 +179,7 @@ export function Inbox() {
                     <p className="text-[14px] text-ink-3 md:pt-0.5">{formatDate(s.updated)}</p>
                     <Link
                       href={traceHref(s.shortage_id, h)}
-                      className="mt-2 self-start rounded-full border-[1.5px] border-clay px-4 py-1.5 text-[14px] font-medium text-clay after:absolute after:inset-0 group-hover:bg-clay group-hover:text-canvas md:mt-0"
+                      className="mt-2 self-start rounded-full border-[1.5px] border-clay px-4 py-1.5 text-[14px] font-medium text-clay-deep after:absolute after:inset-0 group-hover:bg-clay group-hover:text-canvas md:mt-0"
                     >
                       Trace
                     </Link>

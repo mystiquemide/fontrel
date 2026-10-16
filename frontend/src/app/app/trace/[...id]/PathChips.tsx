@@ -68,7 +68,7 @@ export function PathChips({ steps, running }: { steps: Step[]; running: boolean 
             ) : (
               <div className={`rounded-[12px] border-[1.5px] border-dashed border-line p-4 ${running ? "motion-safe:animate-pulse" : ""}`}>
                 <p className="label">{["Shortage", "Product", "Plant", "Also exposed"][i]}</p>
-                <p className="mt-1.5 text-ink-3">{running ? "Tracing" : "Not reached"}</p>
+                <p className="mt-1.5 text-ink-3">{running ? "Tracing" : "No data"}</p>
               </div>
             )}
           </li>

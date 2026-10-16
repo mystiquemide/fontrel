@@ -71,7 +71,7 @@ function Chip({ label, title: t, sub, tone = "ink" }: { label: string; title: st
 }
 
 const STATUS = {
-  independent: { text: "Independent plant", dot: "bg-clear", color: "text-clear" },
+  independent: { text: "Independent plant", dot: "bg-clear", color: "text-clear-deep" },
   unknown: { text: "No site on file", dot: "bg-unknown", color: "text-ink-3" },
   shares_site: { text: "Shares the plant", dot: "bg-exposed", color: "text-exposed" },
 } as const;
@@ -105,7 +105,7 @@ export function LiveCase() {
               <p className="text-[15px] font-medium leading-snug">{title(n.label)}</p>
               <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[13px] text-ink-2">
                 {company(n.labeler)}
-                <span className="inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.08em] text-exposed">
+                <span className="inline-flex items-center gap-1.5 font-mono text-[12px] uppercase tracking-[0.08em] text-exposed">
                   <span className="h-1.5 w-1.5 rounded-full bg-exposed" aria-hidden="true" />
                   Exposed
                 </span>
@@ -128,7 +128,7 @@ export function LiveCase() {
                 <p className="text-[15px] font-medium leading-snug">{company(n.labeler)}</p>
                 <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[13px] text-ink-2">
                   <span className="font-mono text-[12px] text-ink-3">NDC {n.id}</span>
-                  <span className={`inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.08em] ${s.color}`}>
+                  <span className={`inline-flex items-center gap-1.5 font-mono text-[12px] uppercase tracking-[0.08em] ${s.color}`}>
                     <span className={`h-1.5 w-1.5 rounded-full ${s.dot}`} aria-hidden="true" />
                     {s.text}
                   </span>
@@ -151,7 +151,7 @@ export function LiveCase() {
           <ol className="mt-12 grid gap-4 lg:grid-cols-3">
             {steps.map((s) => (
               <li key={s.n} className="flex flex-col rounded-[20px] bg-panel p-8">
-                <p className="font-mono text-[13px] text-clay">{s.n}</p>
+                <p className="font-mono text-[13px] text-clay-deep">{s.n}</p>
                 <h3 className="mt-3 font-display text-[28px] leading-[1.15]">{s.title}</h3>
                 <p className="mt-3 text-ink-2">{s.text}</p>
                 {!state ? (

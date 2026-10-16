@@ -13,7 +13,7 @@ const COLOR = {
   line: "#D1C9BF",
   exposed: "#9F2A1F",
   clear: "#4C9A62",
-  unknown: "#737373",
+  unknown: "#666666",
   canvas: "#FEF9EF",
 };
 
@@ -96,7 +96,7 @@ export function SmallGraph({
     <section className="mt-16">
       <div className="flex flex-wrap items-baseline justify-between gap-4">
         <h2 className="font-display text-[28px] leading-tight">The graph behind this answer</h2>
-        <button onClick={() => setOpen((o) => !o)} aria-expanded={open} className="link text-[15px] text-ink-2">
+        <button onClick={() => setOpen((o) => !o)} aria-expanded={open} className="link inline-block py-1.5 text-[15px] text-ink-2">
           {open ? "Hide graph" : "Show graph"}
         </button>
       </div>
@@ -106,9 +106,9 @@ export function SmallGraph({
             <p className="py-10 text-center text-ink-3 motion-safe:animate-pulse">Loading the graph</p>
           ) : state.failed || !lay ? (
             <p className="py-6 text-ink-2">
-              The graph did not load.{" "}
+              The graph did not load. Check your connection, then{" "}
               <button className="link text-ink" onClick={() => setAttempt((a) => a + 1)}>
-                Try again
+                try again
               </button>
             </p>
           ) : (

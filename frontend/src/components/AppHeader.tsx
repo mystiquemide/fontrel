@@ -55,7 +55,7 @@ export function AppHeader() {
         <>
           <span className="label hidden lg:inline">Synthetic hospital</span>
           {error ? (
-            <span className="text-[14px] text-exposed">Hospitals unavailable</span>
+            <span className="text-[14px] text-ink-2">Can&rsquo;t load hospitals. Reload the page.</span>
           ) : tenants === null ? (
             <span className="label">Loading</span>
           ) : (

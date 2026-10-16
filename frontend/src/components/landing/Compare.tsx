@@ -20,7 +20,7 @@ function Mark({ yes, onClay }: { yes: boolean; onClay?: boolean }) {
     <span className="inline-flex items-center gap-2">
       <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true">
         <circle cx="11" cy="11" r="10.25" fill="none" stroke="#D1C9BF" strokeWidth="1.5" />
-        <path d="M8 8 L14 14 M14 8 L8 14" stroke="#737373" strokeWidth="1.5" strokeLinecap="round" />
+        <path d="M8 8 L14 14 M14 8 L8 14" stroke="#666666" strokeWidth="1.5" strokeLinecap="round" />
       </svg>
       <span className="sr-only">No</span>
     </span>

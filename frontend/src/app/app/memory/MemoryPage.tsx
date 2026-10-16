@@ -147,7 +147,7 @@ export function MemoryPage() {
                     <ul className="mt-4">
                       {e.decisions.map((d) => (
                         <li key={d.decision} className="grid gap-1 border-t border-line py-4 md:grid-cols-[110px_1fr] md:gap-6">
-                          <p className={`font-mono text-[12px] uppercase tracking-[0.08em] md:pt-1 ${d.action === "approved" ? "text-clear" : "text-ink-2"}`}>
+                          <p className={`font-mono text-[12px] uppercase tracking-[0.08em] md:pt-1 ${d.action === "approved" ? "text-clear-deep" : "text-ink-2"}`}>
                             {d.action}
                           </p>
                           <div>
@@ -170,7 +170,7 @@ export function MemoryPage() {
                       {e.decisions.length === 0 && <li className="border-t border-line py-4 text-ink-3">No decisions recorded for this shortage.</li>}
                     </ul>
                     {link && (
-                      <Link href={link.href} className="mt-4 inline-block rounded-full border-[1.5px] border-clay px-5 py-2 text-[15px] font-medium text-clay hover:bg-clay-tint">
+                      <Link href={link.href} className="mt-4 inline-block rounded-full border-[1.5px] border-clay px-5 py-2 text-[15px] font-medium text-clay-deep hover:bg-clay-tint">
                         {link.text}
                       </Link>
                     )}

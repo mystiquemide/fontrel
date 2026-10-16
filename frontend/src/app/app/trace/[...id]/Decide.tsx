@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { shortDate, type MemoryRow } from "@/lib/api";
+import { DecisionError, shortDate, type MemoryRow } from "@/lib/api";
 
 type Action = "approved" | "rejected";
 
@@ -27,7 +27,7 @@ export function Decide({
       setOpen(null);
       setReason("");
     } catch (e) {
-      setError(e instanceof Error && e.message.length > 4 ? e.message : "The decision did not save. Try again.");
+      setError(e instanceof DecisionError ? e.message : "Your decision did not save. Check your connection and select Save decision again.");
     } finally {
       setSaving(false);
     }
@@ -36,7 +36,7 @@ export function Decide({
   return (
     <div className="mt-3">
       {current && !open && (
-        <p className={`text-[14px] ${current.action === "approved" ? "text-clear" : "text-ink-2"}`}>
+        <p className={`text-[14px] ${current.action === "approved" ? "text-clear-deep" : "text-ink-2"}`}>
           {current.action === "approved" ? "Approved" : "Rejected"} by {current.by ?? "Pharmacist"}
           {current.at ? `, ${shortDate(current.at)}` : ""}
           {current.reason ? <span className="text-ink-3"> · &ldquo;{current.reason}&rdquo;</span> : null}
@@ -52,7 +52,7 @@ export function Decide({
               className={
                 a === "approved"
                   ? "rounded-full bg-clay px-4 py-1.5 text-[14px] font-medium text-canvas hover:bg-ink disabled:cursor-default disabled:opacity-40 disabled:hover:bg-clay"
-                  : "rounded-full border-[1.5px] border-clay px-4 py-1.5 text-[14px] font-medium text-clay hover:bg-clay-tint disabled:cursor-default disabled:opacity-40 disabled:hover:bg-transparent"
+                  : "rounded-full border-[1.5px] border-clay px-4 py-1.5 text-[14px] font-medium text-clay-deep hover:bg-clay-tint disabled:cursor-default disabled:opacity-40 disabled:hover:bg-transparent"
               }
             >
               {a === "approved" ? "Approve" : "Reject"}
@@ -69,7 +69,7 @@ export function Decide({
         >
           <p className="font-medium">{open === "approved" ? "Approve this substitute" : "Reject this substitute"}</p>
           <label className="mt-3 block">
-            <span className="label">Reason, optional</span>
+            <span className="label">Reason (optional)</span>
             <textarea
               value={reason}
               onChange={(e) => setReason(e.target.value.slice(0, 500))}
@@ -79,11 +79,11 @@ export function Decide({
             <span className="font-mono text-[12px] text-ink-3">{reason.length} / 500</span>
           </label>
           <label className="mt-2 block">
-            <span className="label">Your name</span>
+            <span className="label">Your name (optional)</span>
             <input
               value={by}
               onChange={(e) => setBy(e.target.value.slice(0, 80))}
-              placeholder="Pharmacist"
+              placeholder="Signed as Pharmacist if left blank"
               className="mt-1 w-full rounded-[6px] border-[1.5px] border-line bg-canvas px-3 py-2 text-[15px] placeholder:text-ink-3 focus:border-clay focus:outline-none"
             />
           </label>

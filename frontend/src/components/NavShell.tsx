@@ -33,16 +33,16 @@ export function NavShell({
         </Link>
         <nav aria-label="Main" className="hidden items-center gap-7 text-[15px] md:flex">
           {items.map((i) => (
-            <span key={i.key}>{i.node(link(i.active))}</span>
+            <span key={i.key}>{i.node(`inline-block py-2 ${link(i.active)}`)}</span>
           ))}
         </nav>
         <div className="ml-auto flex min-w-0 items-center gap-3">{right}</div>
       </div>
       {items.length > 0 && (
-        <nav aria-label="Main" className={`wrap flex gap-6 overflow-x-auto border-t py-2.5 text-[15px] md:hidden ${dark ? "border-canvas/20" : "border-line"}`}>
+        <nav aria-label="Main" className={`wrap flex gap-6 overflow-x-auto border-t py-1 text-[15px] md:hidden ${dark ? "border-canvas/20" : "border-line"}`}>
           {items.map((i) => (
             <span key={i.key} className="shrink-0">
-              {i.node(`${link(i.active)} ${i.active ? "underline decoration-clay underline-offset-4" : ""}`)}
+              {i.node(`inline-block py-1.5 ${link(i.active)} ${i.active ? "underline decoration-clay underline-offset-4" : ""}`)}
             </span>
           ))}
         </nav>

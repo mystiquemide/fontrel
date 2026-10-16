@@ -125,6 +125,9 @@ export type MemoryRow = {
 
 export type Recall = { episode: string; rows: MemoryRow[] };
 
+/** An error whose message is written for the pharmacist and safe to show as is. */
+export class DecisionError extends Error {}
+
 export async function postDecision(body: {
   tenant: string;
   shortage_id: string;
@@ -138,7 +141,8 @@ export async function postDecision(body: {
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body),
   });
-  if (!res.ok) throw new Error(res.status === 422 ? "This product is not an equivalent of the shortage drug." : `${res.status}`);
+  if (res.status === 422) throw new DecisionError("This product is not an equivalent of the shortage drug, so it can't be saved as a substitute.");
+  if (!res.ok) throw new Error(`${res.status}`);
   return res.json();
 }
 

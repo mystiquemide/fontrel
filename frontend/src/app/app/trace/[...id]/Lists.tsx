@@ -25,7 +25,7 @@ function label(setid?: string) {
 
 function Status({ tone, children }: { tone: "exposed" | "clear" | "unknown" | "ink"; children: React.ReactNode }) {
   const dot = { exposed: "bg-exposed", clear: "bg-clear", unknown: "bg-unknown", ink: "bg-ink-2" }[tone];
-  const text = { exposed: "text-exposed", clear: "text-clear", unknown: "text-ink-3", ink: "text-ink-2" }[tone];
+  const text = { exposed: "text-exposed", clear: "text-clear-deep", unknown: "text-ink-3", ink: "text-ink-2" }[tone];
   return (
     <span className={`inline-flex items-center gap-2 font-mono text-[12px] uppercase tracking-[0.08em] ${text}`}>
       <span className={`h-2 w-2 rounded-full ${dot}`} aria-hidden="true" />
@@ -37,7 +37,7 @@ function Status({ tone, children }: { tone: "exposed" | "clear" | "unknown" | "i
 function More({ shown, total, onClick, noun }: { shown: number; total: number; onClick: () => void; noun: string }) {
   if (total <= shown) return null;
   return (
-    <button onClick={onClick} className="mt-4 rounded-full border-[1.5px] border-clay px-5 py-2 text-[15px] font-medium text-clay hover:bg-clay-tint">
+    <button onClick={onClick} className="mt-4 rounded-full border-[1.5px] border-clay px-5 py-2 text-[15px] font-medium text-clay-deep hover:bg-clay-tint">
       Show all {total} {noun}
     </button>
   );
@@ -68,7 +68,7 @@ export function ExposedList({ steps, shortageLabeler, running }: { steps: Step[]
       )}
       <div className="mt-6">
         {!rows ? (
-          <Pending text={running ? "Checking which formulary products share this plant" : "This step did not run."} />
+          <Pending text={running ? "Checking which formulary products share this plant" : "This step has no results in this run. Run a fresh trace to try again."} />
         ) : rows.length === 0 ? (
           <p className="border-t border-line py-6 text-ink-2">No other product on your formulary is made at this plant.</p>
         ) : (
@@ -130,7 +130,7 @@ export function SubstituteList({
     <section>
       <div className="flex items-baseline justify-between gap-4">
         <h2 className="font-display text-[28px] leading-tight">Proposed substitutes</h2>
-        {rows && <span className="font-display text-[28px] text-clear">{independent}</span>}
+        {rows && <span className="font-display text-[28px] text-clear-deep">{independent}</span>}
       </div>
       {rows && rows.length > 0 && (
         <p className="mt-2 text-ink-2">
@@ -139,7 +139,7 @@ export function SubstituteList({
       )}
       <div className="mt-6">
         {!rows ? (
-          <Pending text={running ? "Looking for equivalent products made elsewhere" : "This step did not run."} />
+          <Pending text={running ? "Looking for equivalent products made elsewhere" : "This step has no results in this run. Run a fresh trace to try again."} />
         ) : rows.length === 0 ? (
           <p className="border-t border-line py-6 text-ink-2">The graph has no equivalent product for this drug.</p>
         ) : (

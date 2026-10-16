@@ -25,7 +25,7 @@ function QueryToggle({ q }: { q?: Query }) {
   if (!q) return null;
   return (
     <div className="mt-4">
-      <button onClick={() => setOpen((o) => !o)} aria-expanded={open} className="link text-[14px] text-ink-2">
+      <button onClick={() => setOpen((o) => !o)} aria-expanded={open} className="link inline-block py-1.5 text-[14px] text-ink-2">
         {open ? "Hide query" : "Show query"}
       </button>
       {open && (
@@ -108,7 +108,7 @@ export function SourcesPage() {
             {plants.map((p, i) => (
               <li key={p.duns} className="grid grid-cols-1 gap-2 border-t border-line py-4 md:grid-cols-[2.4fr_1.4fr_0.7fr_0.8fr_0.9fr] md:items-center md:gap-6">
                 <div className="flex items-baseline gap-3">
-                  <span className="font-mono text-[13px] text-clay">{String(i + 1).padStart(2, "0")}</span>
+                  <span className="font-mono text-[13px] text-clay-deep">{String(i + 1).padStart(2, "0")}</span>
                   <div>
                     <p className="font-medium">{title(p.site)}</p>
                     <p className="font-mono text-[13px] text-ink-3">DUNS {p.duns}</p>

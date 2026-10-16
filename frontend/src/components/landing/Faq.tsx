@@ -1,6 +1,6 @@
 const QA: [string, string][] = [
   [
-    "Does fontrel tell me what to use instead?",
+    "Does Fontrel tell me what to use instead?",
     "It proposes substitutes and shows why each one is safe or not. A pharmacist approves or rejects every one. Fontrel never chooses a drug or a dose.",
   ],
   [
@@ -9,7 +9,7 @@ const QA: [string, string][] = [
   ],
   [
     "What does “No site on file” mean?",
-    "The label lists no manufacturing plant, so fontrel cannot show the substitute is made somewhere independent. It says so instead of guessing.",
+    "The label lists no manufacturing plant, so Fontrel cannot show the substitute is made somewhere independent. It says so instead of guessing.",
   ],
   [
     "Is my hospital's data shared?",

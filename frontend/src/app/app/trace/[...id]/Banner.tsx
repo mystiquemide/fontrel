@@ -18,8 +18,8 @@ export function Banner({ answer, onFresh }: { answer: TraceAnswer; onFresh: () =
   return (
     <div className="mt-8 flex flex-col gap-3 rounded-[20px] bg-panel px-6 py-5 md:flex-row md:items-center md:justify-between">
       <p className="text-ink-2">{text}</p>
-      <button onClick={onFresh} className="link shrink-0 self-start text-[15px] font-medium text-ink md:self-auto">
-        Run fresh
+      <button onClick={onFresh} className="link shrink-0 self-start py-1.5 text-[15px] font-medium text-ink md:self-auto">
+        Run a fresh trace
       </button>
     </div>
   );

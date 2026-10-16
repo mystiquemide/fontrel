@@ -33,7 +33,7 @@ export function HeroStats() {
         <div key={s.label} className={i === 0 ? "pr-4" : "px-4"}>
           <dd className="font-display text-[clamp(28px,3vw,40px)] leading-none">{s.n.toLocaleString("en-US")}</dd>
           <dt className="mt-2 text-[14px] leading-snug text-canvas/85">{s.label}</dt>
-          <p className="mt-1 font-mono text-[11px] uppercase tracking-[0.08em] text-canvas/60">{s.src}</p>
+          <p className="mt-1 font-mono text-[12px] uppercase tracking-[0.08em] text-canvas/60">{s.src}</p>
         </div>
       ))}
     </dl>

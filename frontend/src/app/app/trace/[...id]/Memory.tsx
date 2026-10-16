@@ -20,11 +20,11 @@ export function MemoryList({ steps, running, live }: { steps: Step[]; running: b
       <div className="mt-6">
         {!rows ? (
           <p className="border-t border-line py-6 text-ink-3 motion-safe:animate-pulse">
-            {running ? "Recalling past decisions for this drug" : "This step did not run."}
+            {running ? "Recalling past decisions for this drug" : "This step has no results in this run. Run a fresh trace to try again."}
           </p>
         ) : rows.length === 0 ? (
           <p className="border-t border-line py-6 text-ink-2">
-            No past decisions for this drug yet. When your team approves or rejects a substitute, fontrel uses it on the next trace.
+            No past decisions for this drug yet. When your team approves or rejects a substitute, Fontrel uses it on the next trace.
           </p>
         ) : (
           <ul>
@@ -33,7 +33,7 @@ export function MemoryList({ steps, running, live }: { steps: Step[]; running: b
                 <p className="font-mono text-[13px] text-ink-3">{month(r.opened)}</p>
                 <div>
                   <p>
-                    <span className={`font-mono text-[12px] uppercase tracking-[0.08em] ${r.action === "approved" ? "text-clear" : "text-ink-2"}`}>
+                    <span className={`font-mono text-[12px] uppercase tracking-[0.08em] ${r.action === "approved" ? "text-clear-deep" : "text-ink-2"}`}>
                       {r.action}
                     </span>{" "}
                     <span className="font-medium">

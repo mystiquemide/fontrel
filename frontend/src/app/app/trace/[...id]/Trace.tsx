@@ -88,7 +88,7 @@ export function Trace() {
   }, [head.kind, h, shortageId, run, runKey]);
 
   const back = (
-    <Link href={`/app?h=${h}`} className="link text-[15px] text-ink-2">
+    <Link href={`/app?h=${h}`} className="link inline-block py-1.5 text-[15px] text-ink-2">
       Back to shortages
     </Link>
   );
@@ -99,8 +99,8 @@ export function Trace() {
         {back}
         <div className="mt-8 rounded-[20px] bg-panel p-8 text-ink-2">
           {head.kind === "missing"
-            ? "This shortage is not on this hospital's formulary, or it is no longer current."
-            : "Fontrel cannot reach its graph database right now."}
+            ? "This shortage is not on this hospital's formulary, or it is no longer current. Pick another one from the shortage list."
+            : "Fontrel cannot reach its graph database right now. Reload the page in a moment."}
         </div>
       </section>
     );
@@ -127,9 +127,9 @@ export function Trace() {
           <button
             onClick={() => setRun((r) => ({ n: r.n + 1, fresh: true }))}
             disabled={running}
-            className="self-start rounded-full border-[1.5px] border-clay px-6 py-3 font-medium text-clay hover:bg-clay-tint disabled:cursor-not-allowed disabled:opacity-50 lg:self-auto"
+            className="self-start rounded-full border-[1.5px] border-clay px-6 py-3 font-medium text-clay-deep hover:bg-clay-tint disabled:cursor-not-allowed disabled:opacity-50 lg:self-auto"
           >
-            {running ? "Tracing" : "Run fresh"}
+            {running ? "Tracing" : "Run a fresh trace"}
           </button>
         </div>
       )}

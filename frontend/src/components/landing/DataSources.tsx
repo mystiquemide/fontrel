@@ -57,7 +57,7 @@ export function DataSources() {
                   <li key={r.source} className="grid gap-1 border-t border-line py-5 md:grid-cols-[1.3fr_1.4fr_1fr] md:items-baseline md:gap-6">
                     <p className="font-medium">
                       {s.href ? (
-                        <a className="link" href={s.href} target="_blank" rel="noreferrer">
+                        <a className="link inline-block py-1" href={s.href} target="_blank" rel="noreferrer">
                           {s.name}
                         </a>
                       ) : (

@@ -38,7 +38,7 @@ export function WhatWeTrace() {
           </h2>
         )}
         <p className="mx-auto mt-4 max-w-[60ch] text-center text-ink-2">
-          The drugs fontrel tracks, with the most current shortages first.
+          The drugs Fontrel tracks, with the most current shortages first.
         </p>
         <ul className="mt-12 grid gap-px border-y border-line bg-line md:grid-cols-2 lg:grid-cols-3">
           {!state
@@ -50,7 +50,7 @@ export function WhatWeTrace() {
             : shown.map((r) => (
                 <li key={r.ingredient} className="bg-canvas px-1 py-6 md:px-6">
                   <p className="font-display text-[28px] leading-tight">{title(r.ingredient)}</p>
-                  <p className="mt-2 text-[17px] text-clay">
+                  <p className="mt-2 text-[17px] text-clay-deep">
                     {r.shortages} current {r.shortages === 1 ? "shortage" : "shortages"}
                   </p>
                   <p className="mt-1 font-mono text-[12px] uppercase tracking-[0.08em] text-ink-3">
@@ -64,7 +64,7 @@ export function WhatWeTrace() {
             <button
               onClick={() => setAll((a) => !a)}
               aria-expanded={all}
-              className="rounded-full border-[1.5px] border-clay px-6 py-3 font-medium text-clay hover:bg-clay-tint"
+              className="rounded-full border-[1.5px] border-clay px-6 py-3 font-medium text-clay-deep hover:bg-clay-tint"
             >
               {all ? "Show fewer" : `Show all ${rows.length}`}
             </button>

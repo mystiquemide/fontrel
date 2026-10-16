@@ -6,14 +6,16 @@
   --color-line: #d1c9bf;
   --color-ink: #2a2b2f;
   --color-ink-2: #515151;
-  --color-ink-3: #737373;
+  --color-ink-3: #666666;
   --color-clay: #b05a36;
   --color-clay-tint: #f6e9dc;
+  --color-clay-deep: #8e4527;
   --color-exposed: #9f2a1f;
   --color-exposed-tint: #f7e4e0;
   --color-clear: #4c9a62;
   --color-clear-tint: #f1f3e5;
-  --color-unknown: #737373;
+  --color-clear-deep: #2f6b40;
+  --color-unknown: #666666;
 
   --font-display: var(--font-newsreader), Georgia, serif;
   --font-sans: var(--font-instrument), system-ui, sans-serif;
@@ -65,6 +67,20 @@ body {
     font-style: italic;
     color: var(--color-clay);
   }
+  .skip-link {
+    position: absolute;
+    left: 16px;
+    top: -60px;
+    z-index: 50;
+    border-radius: 999px;
+    background: var(--color-ink);
+    color: var(--color-canvas);
+    padding: 10px 18px;
+    font-weight: 500;
+  }
+  .skip-link:focus {
+    top: 12px;
+  }
   .link {
     text-decoration: underline;
     text-decoration-color: var(--color-line);
@@ -84,4 +100,10 @@ body {
     opacity: 1;
     transform: none;
   }
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-clay);
+  outline-offset: 3px;
+  border-radius: 4px;
 }

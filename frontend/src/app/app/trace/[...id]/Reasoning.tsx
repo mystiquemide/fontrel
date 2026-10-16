@@ -24,13 +24,13 @@ function StepRow({ step }: { step: Step }) {
   return (
     <li className="border-t border-line py-4 motion-safe:animate-[chip_400ms_ease-out]">
       <div className="flex items-baseline gap-3">
-        <span className="font-mono text-[13px] text-clay">{String(step.n).padStart(2, "0")}</span>
+        <span className="font-mono text-[13px] text-clay-deep">{String(step.n).padStart(2, "0")}</span>
         <div className="min-w-0 flex-1">
           <p className="font-medium leading-snug">{TOOL_NAMES[step.tool] ?? step.tool}</p>
           <p className="mt-0.5 font-mono text-[13px] text-ink-3">
             {step.tool} · {step.rows} {step.rows === 1 ? "row" : "rows"} · {step.ms} ms
           </p>
-          <button onClick={() => setOpen((o) => !o)} aria-expanded={open} className="link mt-2 text-[14px] text-ink-2">
+          <button onClick={() => setOpen((o) => !o)} aria-expanded={open} className="link mt-1 inline-block py-1.5 text-[14px] text-ink-2">
             {open ? "Hide query" : "Show query"}
           </button>
           {open &&
@@ -54,7 +54,7 @@ export function Reasoning({ steps, answer, running }: { steps: Step[]; answer: T
   const model = answer?.model.replace(/^openai\//, "");
   return (
     <aside className="rounded-[20px] bg-panel p-6 md:p-8 lg:sticky lg:top-6">
-      <h2 className="font-display text-[28px] leading-tight">How fontrel got here</h2>
+      <h2 className="font-display text-[28px] leading-tight">How Fontrel got here</h2>
       <p className="mt-2 text-[15px] text-ink-2">Every answer comes from these graph queries. Open any one to see the Cypher.</p>
       <ol className="mt-6">
         {steps.map((s) => (
@@ -66,7 +66,7 @@ export function Reasoning({ steps, answer, running }: { steps: Step[]; answer: T
       <div className="mt-4 border-t border-line pt-6">
         <p className="label">Agent summary</p>
         {!answer ? (
-          <p className="mt-3 text-ink-3">{running ? "Written once the graph steps finish." : "No summary for this run."}</p>
+          <p className="mt-3 text-ink-3">{running ? "Written once the graph steps finish." : "No summary for this run. Run a fresh trace to try again."}</p>
         ) : answer.degraded ? (
           <p className="mt-3 text-ink-2">No written summary this time. The lists come straight from the graph.</p>
         ) : (
