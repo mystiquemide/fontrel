@@ -9,6 +9,7 @@ import { getJSON, type Tenant } from "@/lib/api";
 const NAV = [
   { href: "/app", label: "Shortages" },
   { href: "/app/memory", label: "Memory" },
+  { href: "/app/sources", label: "Sources" },
 ];
 
 export function AppHeader() {
