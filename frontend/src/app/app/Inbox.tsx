@@ -2,7 +2,8 @@
 
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { getJSON, type Shortage, type Tenant } from "@/lib/api";
+import Link from "next/link";
+import { formatDate, getJSON, traceHref, type Shortage, type Tenant } from "@/lib/api";
 
 type Result =
   | { kind: "error"; message: string }
@@ -11,23 +12,17 @@ type State = Result | { kind: "loading" };
 type Sort = "recent" | "drug" | "status";
 
 const STATUS_ORDER: Record<string, number> = { Unavailable: 0, "Limited Availability": 1, Available: 2 };
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 function dateKey(mdy: string) {
   const [m, d, y] = mdy.split("/");
   return `${y}${m}${d}`;
 }
 
-function formatDate(mdy: string) {
-  const [m, d, y] = mdy.split("/").map(Number);
-  return m && d && y ? `${MONTHS[m - 1]} ${d}, ${y}` : mdy;
-}
-
 function title(s: string) {
   return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
 }
 
-const COLS = "grid grid-cols-1 gap-1 md:grid-cols-[2.2fr_1.4fr_1fr_0.8fr] md:gap-6";
+const COLS = "grid grid-cols-1 gap-1 md:grid-cols-[2.2fr_1.4fr_1fr_0.8fr_auto] md:gap-6";
 
 export function Inbox() {
   const h = useSearchParams().get("h") ?? "mercy";
@@ -144,6 +139,7 @@ export function Inbox() {
             {["Drug", "Company", "Status", "Updated"].map((c) => (
               <span key={c} className="label">{c}</span>
             ))}
+            <span className="sr-only">Action</span>
           </div>
 
           {state.kind === "loading" && (
@@ -171,7 +167,7 @@ export function Inbox() {
             <>
               <ul>
                 {rows.map((s) => (
-                  <li key={s.shortage_id} className={`${COLS} border-t border-line py-4`}>
+                  <li key={s.shortage_id} className={`${COLS} group relative border-t border-line py-4 hover:bg-clay-tint`}>
                     <div>
                       <p className="font-medium">{s.shortage}</p>
                       <p className="font-mono text-[13px] text-ink-3">Package NDC {s.shortage_id.split("|")[0]}</p>
@@ -181,6 +177,12 @@ export function Inbox() {
                       {title(s.availability)}
                     </p>
                     <p className="text-[14px] text-ink-3 md:pt-0.5">{formatDate(s.updated)}</p>
+                    <Link
+                      href={traceHref(s.shortage_id, h)}
+                      className="mt-2 self-start rounded-full border-[1.5px] border-clay px-4 py-1.5 text-[14px] font-medium text-clay after:absolute after:inset-0 group-hover:bg-clay group-hover:text-canvas md:mt-0"
+                    >
+                      Trace
+                    </Link>
                   </li>
                 ))}
               </ul>
