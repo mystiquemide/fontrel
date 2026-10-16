@@ -25,4 +25,4 @@ def test_tenant_id_validation():
 
 def test_llm_settings_present():
     assert settings.llm_base_url.startswith("https://")
-    assert settings.llm_model and settings.llm_model_strong
+    assert settings.llm_model and settings.llm_model_fast

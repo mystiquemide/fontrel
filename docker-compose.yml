@@ -4,6 +4,9 @@ services:
     ports:
       - "6379:6379"
       - "3000:3000"
+    environment:
+      # append-only file so recent writes survive a restart, not only periodic snapshots
+      - REDIS_ARGS=--appendonly yes --appendfsync everysec
     volumes:
       - falkordb-data:/var/lib/falkordb/data
     healthcheck:
