@@ -41,3 +41,12 @@ def test_equivalence_pairs_cross_labeler_only():
 
 def test_equivalence_loaded():
     assert q("MATCH ()-[e:EQUIVALENT_TO]->() RETURN count(e)")[0][0] > 1000
+
+
+def test_dmf_alias_for_fda_misspelling():
+    from ingest.dmf import ALIASES
+    from ingest.openfda import word_match
+    assert any(word_match(a, "LISDEXAETAMINE DIMESYLATE") for a in ALIASES["LISDEXAMFETAMINE"])
+    n = q("""MATCH (:Supplier)-[:CANDIDATE_SUPPLIER]->(i:Ingredient)
+             WHERE i.name STARTS WITH 'LISDEXAMFETAMINE' RETURN count(*)""")[0][0]
+    assert n > 0

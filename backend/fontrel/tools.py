@@ -199,3 +199,39 @@ READ_TOOLS = {
     "exposure_clusters": exposure_clusters,
     "recall_memory": recall_memory,
 }
+
+
+# --- page summaries (not exposed to the LLM) --------------------------------------------
+
+def ingredient_summary() -> ToolResult:
+    """Each curated ingredient with its product count, current shortage count and
+    candidate supplier count (FDA DMF holders)."""
+    run = _Run("ingredient_summary")
+    counts = run.q(graph.supply(), """
+        MATCH (p:Product) UNWIND p.terms AS term
+        OPTIONAL MATCH (p)<-[:AFFECTS]-(s:Shortage)
+        RETURN term AS ingredient, count(DISTINCT p) AS products, count(DISTINCT s) AS shortages""", {})
+    suppliers = run.q(graph.supply(), """
+        MATCH (p:Product)-[:CONTAINS]->(:Ingredient)<-[:CANDIDATE_SUPPLIER]-(sup:Supplier)
+        UNWIND p.terms AS term
+        RETURN term AS ingredient, count(DISTINCT sup) AS candidate_suppliers""", {})
+    by_term = {r["ingredient"]: r["candidate_suppliers"] for r in suppliers}
+    rows = [{**r, "candidate_suppliers": by_term.get(r["ingredient"], 0)} for r in counts]
+    rows.sort(key=lambda r: (-r["shortages"], r["ingredient"]))
+    return run.done(rows)
+
+
+def anchor_shortage(tenant_id: str, preferred_ndc: str = "55150-249") -> ToolResult:
+    """The shortage used to show a real case: the preferred product if it is still a current
+    shortage on this formulary, otherwise the one with the most exposed products from other
+    companies made at the same plant."""
+    run = _Run("anchor_shortage")
+    rows = run.q(graph.supply(), """
+        MATCH (s:Shortage)-[:AFFECTS]->(p:Product)-[:MANUFACTURED_AT]->(site:Site)<-[:MANUFACTURED_AT]-(o:Product)
+        WHERE p.product_ndc IN $formulary AND o.product_ndc IN $formulary AND o.labeler <> p.labeler
+        WITH s, p, count(DISTINCT o) AS cross_company_exposed
+        RETURN s.id AS shortage_id, p.product_ndc AS product_ndc, s.generic_name AS shortage,
+               s.company AS company, cross_company_exposed
+        ORDER BY (p.product_ndc = $preferred) DESC, cross_company_exposed DESC, s.id LIMIT 1""",
+                 {"formulary": formulary_ndcs(tenant_id), "preferred": preferred_ndc})
+    return run.done(rows, "" if rows else "no shortage on this formulary shares a plant with another company")

@@ -14,6 +14,9 @@ from .openfda import word_match
 
 URL = "https://www.fda.gov/media/192069/download?attachment"
 WEIGHT = 0.3
+# Spellings used in the FDA DMF list that differ from openFDA ingredient names.
+# Checked Oct 16, 2026: every lisdexamfetamine entry is listed as "LISDEXAETAMINE".
+ALIASES = {"LISDEXAMFETAMINE": ["LISDEXAETAMINE"]}
 # Subjects naming finished products or facilities, not the ingredient itself.
 NOT_API = re.compile(r"INJECTION|TABLET|CAPSULE|FACILIT|FILLING|SOLUTION|VIAL|SYRINGE|PATCH|CREAM", re.I)
 
@@ -41,7 +44,7 @@ def dmf_rows(terms: list[str]) -> list[dict]:
         if NOT_API.search(subj):
             continue
         for t in terms:
-            if word_match(t, subj):
+            if any(word_match(name, subj) for name in [t, *ALIASES.get(t, [])]):
                 rows.append({"dmf": str(num), "holder": str(holder).strip(), "holder_norm": norm(str(holder)),
                              "subject": subj, "term": t})
     return rows

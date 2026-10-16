@@ -195,3 +195,24 @@ def memory(tenant: str = Query(...)):
         ORDER BY e.opened DESC""").result_set
     keys = ["episode", "label", "opened", "closed", "status", "synthetic", "decisions"]
     return [dict(zip(keys, r)) for r in rows]
+
+
+@app.get("/api/ingredients")
+def ingredients():
+    rows = tools.ingredient_summary().rows
+    return {"count": len(rows), "ingredients": rows}
+
+
+@app.get("/api/sources")
+def sources(tenant: str = Query(...)):
+    tenant = _tenant(tenant)
+    pr, cl = tools.rank_source_concentration(10), tools.exposure_clusters(tenant, 5)
+    return {"plants": pr.rows, "clusters": cl.rows, "queries": pr.queries + cl.queries}
+
+
+@app.get("/api/anchor")
+def anchor(tenant: str = Query("mercy")):
+    r = tools.anchor_shortage(_tenant(tenant))
+    if not r.rows:
+        raise HTTPException(404, r.note)
+    return r.rows[0]

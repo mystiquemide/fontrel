@@ -151,3 +151,26 @@ def test_degraded_trace_not_cached(no_llm):
     graph.tenant("mercy").query("MATCH (t:Trace) DETACH DELETE t")
     c.post("/api/trace", json={"tenant": "mercy", "shortage_id": anchor()})
     assert graph.tenant("mercy").query("MATCH (t:Trace) RETURN count(t)").result_set == [[0]]
+
+
+def test_ingredients_summary():
+    d = c.get("/api/ingredients").json()
+    assert d["count"] >= 30
+    rows = d["ingredients"]
+    assert all(r["products"] > 0 for r in rows)
+    assert [r["shortages"] for r in rows] == sorted((r["shortages"] for r in rows), reverse=True)
+    assert any(r["candidate_suppliers"] > 0 for r in rows)
+
+
+def test_sources_ranked_and_clustered():
+    d = c.get("/api/sources?tenant=mercy").json()
+    assert len(d["plants"]) == 10 and d["plants"][0]["pagerank"] >= d["plants"][-1]["pagerank"]
+    assert d["clusters"] and d["queries"]
+    assert c.get("/api/sources?tenant=nobody").status_code == 404
+
+
+def test_anchor_is_current_and_cross_company():
+    a = c.get("/api/anchor?tenant=mercy").json()
+    assert a["product_ndc"] == ANCHOR_NDC and a["cross_company_exposed"] > 0
+    current = {r["shortage_id"] for r in c.get("/api/shortages?tenant=mercy").json()}
+    assert a["shortage_id"] in current
