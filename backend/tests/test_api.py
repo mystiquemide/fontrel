@@ -188,3 +188,9 @@ def test_recall_shows_new_decision_in_current_episode(cleanup):
     new = [r for r in after["rows"] if r["decision"] == made["decision"]]
     assert len(after["rows"]) == len(before["rows"]) + 1
     assert new and new[0]["by"] == "Test Pharmacist" and new[0]["episode"] == made["episode"]
+
+
+def test_subgraph_marks_exposed_shortage_status():
+    exposed = [n for n in _sub()["nodes"] if n.get("role") == "exposed"]
+    assert exposed and all(isinstance(n["in_shortage"], bool) for n in exposed)
+    assert any(not n["in_shortage"] and n["labeler"] != "Eugia US LLC" for n in exposed)

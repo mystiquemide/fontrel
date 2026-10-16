@@ -134,7 +134,8 @@ def subgraph(tenant: str = Query(...), shortage_id: str = Query(...), limit: int
     for r in tools.find_site_exposure(tenant, sid).rows:
         if r["labeler"] == info["labeler"] and len(nodes) > limit // 2:
             continue  # keep room for other companies, they are the hidden risk
-        if node(r["product_ndc"], r["product"], "product", labeler=r["labeler"], role="exposed"):
+        if node(r["product_ndc"], r["product"], "product", labeler=r["labeler"], role="exposed",
+                in_shortage=r["already_in_shortage"]):
             edge(r["product_ndc"], "site:" + r["duns"], "MADE_AT", setid=r["exposed_label_setid"])
     return {"nodes": list(nodes.values()), "edges": edges}
 
