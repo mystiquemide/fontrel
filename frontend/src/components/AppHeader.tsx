@@ -6,7 +6,10 @@ import { useEffect, useState } from "react";
 import { Logo } from "./Logo";
 import { getJSON, type Tenant } from "@/lib/api";
 
-const NAV = [{ href: "/app", label: "Shortages" }];
+const NAV = [
+  { href: "/app", label: "Shortages" },
+  { href: "/app/memory", label: "Memory" },
+];
 
 export function AppHeader() {
   const router = useRouter();
@@ -32,6 +35,9 @@ export function AppHeader() {
     router.push(`${pathname}?${next.toString()}`);
   }
 
+  const active = (href: string) =>
+    href === "/app" ? pathname === "/app" || pathname.startsWith("/app/trace") : pathname.startsWith(href);
+
   return (
     <header className="border-b border-line bg-canvas">
       <div className="wrap flex h-16 items-center gap-4 md:gap-8">
@@ -43,7 +49,7 @@ export function AppHeader() {
             <Link
               key={n.href}
               href={`${n.href}?h=${current}`}
-              className={pathname === n.href ? "text-ink" : "text-ink-2 hover:text-clay"}
+              className={active(n.href) ? "text-ink" : "text-ink-2 hover:text-clay"}
             >
               {n.label}
             </Link>
@@ -76,6 +82,13 @@ export function AppHeader() {
           )}
         </div>
       </div>
+      <nav className="wrap flex gap-6 border-t border-line py-2.5 text-[15px] md:hidden">
+        {NAV.map((n) => (
+          <Link key={n.href} href={`${n.href}?h=${current}`} className={active(n.href) ? "text-ink underline decoration-clay underline-offset-4" : "text-ink-2"}>
+            {n.label}
+          </Link>
+        ))}
+      </nav>
     </header>
   );
 }

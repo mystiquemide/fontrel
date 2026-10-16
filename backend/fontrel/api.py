@@ -201,11 +201,12 @@ def memory(tenant: str = Query(...)):
         MATCH (e:Episode) OPTIONAL MATCH (d:Decision)-[:IN]->(e)
         OPTIONAL MATCH (d)-[:CHOSE]->(s:FormularyItem)
         RETURN e.id, e.shortage_label, e.opened, e.closed, e.status, coalesce(e.synthetic, false),
+               e.product_ndc, e.shortage_id,
                collect(CASE WHEN d IS NULL THEN NULL ELSE {decision: d.id, action: d.action,
                    substitute_ndc: d.substitute_ndc, substitute: s.generic_name, labeler: s.labeler,
                    reason: d.reason, by: d.by, at: d.at, outcome: d.outcome, outcome_days: d.outcome_days} END)
         ORDER BY e.opened DESC""").result_set
-    keys = ["episode", "label", "opened", "closed", "status", "synthetic", "decisions"]
+    keys = ["episode", "label", "opened", "closed", "status", "synthetic", "product_ndc", "shortage_id", "decisions"]
     return [dict(zip(keys, r)) for r in rows]
 
 
