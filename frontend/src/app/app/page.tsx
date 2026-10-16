@@ -1,10 +1,10 @@
 import { Suspense } from "react";
-import { InboxTop } from "./InboxTop";
+import { Inbox } from "./Inbox";
 
 export default function AppPage() {
   return (
     <Suspense fallback={<div className="wrap py-16 label">Loading</div>}>
-      <InboxTop />
+      <Inbox />
     </Suspense>
   );
 }
