@@ -1,7 +1,7 @@
 """OpenAI-compatible chat client. Groq by default; any provider works via LLM_BASE_URL."""
 from functools import lru_cache
 
-from openai import OpenAI
+from openai import BadRequestError, OpenAI
 
 from .config import settings
 
@@ -17,6 +17,12 @@ def client() -> OpenAI:
     return OpenAI(base_url=settings.llm_base_url, api_key=settings.llm_api_key, timeout=30, max_retries=0)
 
 
+def _malformed_tool_call(e: Exception) -> bool:
+    """Groq returns 400 when the model emits a tool call it cannot parse. A second sample usually works."""
+    text = str(e).lower()
+    return isinstance(e, BadRequestError) and ("tool call" in text or "tool_use_failed" in text)
+
+
 def chat(messages: list[dict], tools: list[dict] | None, model: str, force_tool: str | None = None):
     try:
         kwargs = {"model": model, "messages": messages, "temperature": 0}
@@ -24,7 +30,12 @@ def chat(messages: list[dict], tools: list[dict] | None, model: str, force_tool:
             kwargs["tools"] = tools
         if force_tool:
             kwargs["tool_choice"] = {"type": "function", "function": {"name": force_tool}}
-        return client().chat.completions.create(**kwargs)
+        try:
+            return client().chat.completions.create(**kwargs)
+        except Exception as e:
+            if not _malformed_tool_call(e):
+                raise
+            return client().chat.completions.create(**{**kwargs, "temperature": 0.3})
     except LLMUnavailable:
         raise
     except Exception as e:  # rate limit, quota, network, provider error

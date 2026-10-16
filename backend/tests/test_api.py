@@ -58,7 +58,7 @@ def test_unknown_shortage_404():
 
 
 def test_trace_streams_steps_then_answer(no_llm):
-    r = c.post("/api/trace", json={"tenant": "mercy", "shortage_id": anchor()})
+    r = c.post("/api/trace", json={"tenant": "mercy", "shortage_id": anchor(), "fresh": True})
     events = [(b.split("\n")[0][7:], json.loads(b.split("\n")[1][6:]))
               for b in r.text.strip().split("\n\n")]
     kinds = [k for k, _ in events]

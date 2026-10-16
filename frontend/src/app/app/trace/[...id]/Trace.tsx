@@ -5,7 +5,10 @@ import { useParams, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { formatDate, getJSON, streamTrace, type Shortage, type Step, type TraceAnswer } from "@/lib/api";
 import { ExposedList, SubstituteList } from "./Lists";
+import { Banner } from "./Banner";
+import { MemoryList } from "./Memory";
 import { PathChips } from "./PathChips";
+import { Reasoning } from "./Reasoning";
 
 type Header = { kind: "loading" } | { kind: "missing" } | { kind: "error" } | { kind: "ready"; s: Shortage };
 
@@ -114,15 +117,16 @@ export function Trace() {
           </button>
         </div>
       )}
-      {done && (
-        <p className="label mt-4">
-          {done.replayed ? `Saved trace, first run took ${done.elapsed_s.toFixed(2)} s` : `Traced in ${done.elapsed_s.toFixed(2)} s`} · {stepList.length} graph steps
-        </p>
-      )}
+      {done && <Banner answer={done} onFresh={() => setRun((r) => ({ n: r.n + 1, fresh: true }))} />}
+
       {(stepList.length > 0 || running) && (
-        <div className="mt-12 grid gap-12 lg:grid-cols-2">
-          <ExposedList steps={stepList} running={running} shortageLabeler={head.kind === "ready" ? head.s.labeler : undefined} />
-          <SubstituteList steps={stepList} running={running} />
+        <div className="mt-12 grid items-start gap-12 lg:grid-cols-[3fr_2fr]">
+          <div className="flex min-w-0 flex-col gap-14">
+            <ExposedList steps={stepList} running={running} shortageLabeler={head.kind === "ready" ? head.s.labeler : undefined} />
+            <SubstituteList steps={stepList} running={running} />
+            <MemoryList steps={stepList} running={running} />
+          </div>
+          <Reasoning steps={stepList} answer={done} running={running} />
         </div>
       )}
     </section>

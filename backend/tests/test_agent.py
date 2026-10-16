@@ -101,3 +101,40 @@ def test_unknown_tool_does_not_crash(monkeypatch):
     out = agent.run_trace("mercy", sid())
     assert not out["degraded"]
     assert all(s["tool"] != "drop_database" for s in out["steps"])
+
+
+def test_malformed_tool_call_retries_once(monkeypatch):
+    import httpx
+    from openai import BadRequestError, RateLimitError
+    from fontrel import llm
+
+    req = httpx.Request("POST", "https://x")
+    bad = BadRequestError("Failed to parse tool call arguments as JSON", response=httpx.Response(400, request=req), body=None)
+    limited = RateLimitError("Rate limit reached", response=httpx.Response(429, request=req), body=None)
+    calls = []
+
+    class Completions:
+        def __init__(self, errors):
+            self.errors = errors
+
+        def create(self, **kw):
+            calls.append(kw)
+            if self.errors:
+                raise self.errors.pop(0)
+            return "ok"
+
+    class Fake:
+        def __init__(self, errors):
+            self.chat = type("C", (), {"completions": Completions(errors)})()
+
+    monkeypatch.setattr(llm, "client", lambda: fake)
+    fake = Fake([bad])
+    assert llm.chat([], None, "m") == "ok" and len(calls) == 2
+
+    calls.clear()
+    fake = Fake([limited])
+    try:
+        llm.chat([], None, "m")
+        raise AssertionError("expected LLMUnavailable")
+    except llm.LLMUnavailable:
+        assert len(calls) == 1
