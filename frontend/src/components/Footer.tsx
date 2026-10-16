@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { ScrollLink } from "./landing/ScrollLink";
 import { Mark } from "./Logo";
 
 const CREDITS = [
@@ -17,9 +17,9 @@ export function Footer() {
           <a className="link" href="https://github.com/mystiquemide/graph-hack">
             GitHub
           </a>
-          <Link className="link" href="/#sources">
+          <ScrollLink className="link" to="sources">
             Data sources
-          </Link>
+          </ScrollLink>
         </div>
         <p>
           Photos on Unsplash by{" "}

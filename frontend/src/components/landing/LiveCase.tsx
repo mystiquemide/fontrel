@@ -143,7 +143,7 @@ export function LiveCase() {
 
   return (
     <>
-      <section id="how" className="scroll-mt-20 py-[clamp(48px,7vw,96px)]">
+      <section id="how" className="scroll-mt-28 md:scroll-mt-20 py-[clamp(48px,7vw,96px)]">
         <div className="wrap">
           <h2 className="h2 text-center">
             How it <span className="em">works</span>
@@ -171,7 +171,7 @@ export function LiveCase() {
       <ShelvesBand />
 
       {ready && d!.hidden.length > 0 && (
-        <section id="case" className="scroll-mt-20 bg-panel py-[clamp(48px,7vw,96px)]">
+        <section id="case" className="scroll-mt-28 md:scroll-mt-20 bg-panel py-[clamp(48px,7vw,96px)]">
           <div className="wrap">
             <h2 className="h2 max-w-[22ch]">
               A real case from <span className="em">today&rsquo;s</span> shortage list.

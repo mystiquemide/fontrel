@@ -28,7 +28,7 @@ export function WhatWeTrace() {
   const shown = all ? rows : rows.slice(0, 9);
 
   return (
-    <section id="trace" className="scroll-mt-20 py-[clamp(48px,7vw,96px)]">
+    <section id="trace" className="scroll-mt-28 md:scroll-mt-20 py-[clamp(48px,7vw,96px)]">
       <div className="wrap">
         {!state ? (
           <div className="mx-auto h-14 w-2/3 animate-pulse rounded-[12px] bg-panel" />

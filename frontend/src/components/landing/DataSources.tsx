@@ -35,7 +35,7 @@ export function DataSources() {
   const rows = ORDER.map((k) => state?.rows?.find((r) => r.source === k)).filter((r): r is Ingest => Boolean(r));
 
   return (
-    <section id="sources" className="scroll-mt-20 bg-panel py-[clamp(48px,7vw,96px)]">
+    <section id="sources" className="scroll-mt-28 md:scroll-mt-20 bg-panel py-[clamp(48px,7vw,96px)]">
       <div className="wrap">
         <h2 className="h2 max-w-[20ch]">
           Every answer <span className="em">links to its source.</span>

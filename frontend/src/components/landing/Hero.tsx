@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import hero from "../../../public/images/pharmacist-aisle.jpg";
 import { HeroStats } from "./HeroStats";
+import { ScrollLink } from "./ScrollLink";
 
 export function Hero() {
   return (
@@ -33,9 +34,9 @@ export function Hero() {
             <Link href="/app" className="rounded-full bg-clay px-6 py-3.5 font-medium text-canvas hover:bg-canvas hover:text-ink">
               Open the app
             </Link>
-            <a href="#how" className="text-[16px] text-canvas underline decoration-canvas/40 underline-offset-4 hover:decoration-canvas">
+            <ScrollLink to="how" className="text-[16px] text-canvas underline decoration-canvas/40 underline-offset-4 hover:decoration-canvas">
               See how it works
-            </a>
+            </ScrollLink>
           </div>
           <div className="mt-12 border-t border-canvas/25 pt-6">
             <HeroStats />

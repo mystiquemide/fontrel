@@ -23,7 +23,7 @@ const QA: [string, string][] = [
 
 export function Faq() {
   return (
-    <section id="faq" className="scroll-mt-20 py-[clamp(48px,7vw,96px)]">
+    <section id="faq" className="scroll-mt-28 md:scroll-mt-20 py-[clamp(48px,7vw,96px)]">
       <div className="wrap grid gap-10 lg:grid-cols-[1fr_1.6fr]">
         <h2 className="h2">
           Questions, <span className="em">answered.</span>

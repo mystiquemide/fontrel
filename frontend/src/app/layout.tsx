@@ -22,7 +22,7 @@ const fragment = Fragment_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "fontrel",
+  title: { default: "fontrel · See the shortage behind the shortage", template: "%s · fontrel" },
   description: "See the shortage behind the shortage. A drug shortage response agent for hospital pharmacy, built on FalkorDB.",
 };
 

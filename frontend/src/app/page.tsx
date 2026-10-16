@@ -11,14 +11,7 @@ import { SiteNav } from "@/components/landing/SiteNav";
 export default function Home() {
   return (
     <>
-      <SiteNav
-        links={[
-          { href: "#how", label: "How it works" },
-          { href: "#trace", label: "What we trace" },
-          { href: "#sources", label: "Sources" },
-          { href: "#faq", label: "FAQ" },
-        ]}
-      />
+      <SiteNav />
       <main className="flex-1">
         <Hero />
         <LiveCase />
