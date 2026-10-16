@@ -147,6 +147,8 @@ Browser (Next.js) ──▶ FastAPI ──▶ agent loop ──▶ read-only gra
 
 Fontrel uses one shared graph for public data and one graph per hospital. The hospital graphs never query each other. They join to the shared graph on product NDC.
 
+![The graph behind one trace: substitutes on the left, the shortage product and its plant in the middle, exposed products on the right](assets/graph.png)
+
 ### Shared graph: `supply`
 
 | Node | Key properties | Source |
