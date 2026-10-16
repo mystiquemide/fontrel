@@ -85,3 +85,23 @@ export function formatDate(mdy: string) {
 export function traceHref(shortageId: string, h: string) {
   return `/app/trace/${encodeURIComponent(shortageId)}?h=${h}`;
 }
+
+export type ExposedRow = {
+  product_ndc: string;
+  product: string;
+  labeler: string;
+  via_site: string;
+  exposed_label_setid: string;
+  already_in_shortage: boolean;
+};
+
+export function sortExposed(rows: ExposedRow[], shortageLabeler?: string) {
+  const unique = [...new Map(rows.map((r) => [r.product_ndc, r])).values()];
+  return unique.sort(
+    (a, b) =>
+      Number(a.labeler === shortageLabeler) - Number(b.labeler === shortageLabeler) ||
+      Number(a.already_in_shortage) - Number(b.already_in_shortage) ||
+      a.labeler.localeCompare(b.labeler) ||
+      a.product.localeCompare(b.product),
+  );
+}

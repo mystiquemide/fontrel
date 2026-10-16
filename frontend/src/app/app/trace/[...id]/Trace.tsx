@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { formatDate, getJSON, streamTrace, type Shortage, type Step, type TraceAnswer } from "@/lib/api";
+import { ExposedList, SubstituteList } from "./Lists";
 import { PathChips } from "./PathChips";
 
 type Header = { kind: "loading" } | { kind: "missing" } | { kind: "error" } | { kind: "ready"; s: Shortage };
@@ -117,6 +118,12 @@ export function Trace() {
         <p className="label mt-4">
           {done.replayed ? `Saved trace, first run took ${done.elapsed_s.toFixed(2)} s` : `Traced in ${done.elapsed_s.toFixed(2)} s`} · {stepList.length} graph steps
         </p>
+      )}
+      {(stepList.length > 0 || running) && (
+        <div className="mt-12 grid gap-12 lg:grid-cols-2">
+          <ExposedList steps={stepList} running={running} shortageLabeler={head.kind === "ready" ? head.s.labeler : undefined} />
+          <SubstituteList steps={stepList} running={running} />
+        </div>
       )}
     </section>
   );

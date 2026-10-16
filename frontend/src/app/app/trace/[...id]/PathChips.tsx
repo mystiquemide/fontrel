@@ -1,4 +1,4 @@
-import type { Step } from "@/lib/api";
+import { sortExposed, type ExposedRow, type Step } from "@/lib/api";
 
 type Chip = { label: string; title: string; sub: string; tone: "ink" | "exposed" | "muted" };
 
@@ -22,10 +22,10 @@ function buildChips(steps: Step[]): (Chip | null)[] {
     : { label: "Plant", title: "No plant on file", sub: "DailyMed lists no manufacturing site", tone: "muted" };
   if (!exposure || !site) return chips;
 
-  const rows = exposure.data as { product_ndc: string; product: string; labeler: string; via_site: string }[];
-  const products = new Map(rows.map((r) => [r.product_ndc, r]));
-  const others = [...products.values()].filter((r) => r.labeler !== shortage.labeler);
-  const lead = others[0] ?? [...products.values()][0];
+  const sorted = sortExposed(exposure.data as ExposedRow[], shortage.labeler);
+  const products = { size: sorted.length };
+  const others = sorted.filter((r) => r.labeler !== shortage.labeler);
+  const lead = sorted[0];
   chips[3] = lead
     ? {
         label: "Also exposed",
