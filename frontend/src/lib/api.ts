@@ -105,3 +105,44 @@ export function sortExposed(rows: ExposedRow[], shortageLabeler?: string) {
       a.product.localeCompare(b.product),
   );
 }
+
+export type MemoryRow = {
+  episode: string;
+  decision: string;
+  episode_label: string;
+  opened: string;
+  action: "approved" | "rejected";
+  substitute_ndc: string;
+  substitute: string;
+  substitute_labeler: string;
+  reason: string;
+  outcome: string | null;
+  outcome_days: number | null;
+  synthetic?: boolean;
+  by?: string | null;
+  at?: string | null;
+};
+
+export type Recall = { episode: string; rows: MemoryRow[] };
+
+export async function postDecision(body: {
+  tenant: string;
+  shortage_id: string;
+  substitute_ndc: string;
+  action: "approved" | "rejected";
+  reason: string;
+  by: string;
+}) {
+  const res = await fetch("/api/decisions", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(res.status === 422 ? "This product is not an equivalent of the shortage drug." : `${res.status}`);
+  return res.json();
+}
+
+export function shortDate(iso: string) {
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? iso : `${MONTHS[d.getMonth()]} ${d.getDate()}`;
+}

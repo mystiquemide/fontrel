@@ -183,7 +183,7 @@ def recall_memory(tenant_id: str, shortage_id: str) -> ToolResult:
                d.id AS decision, d.action AS action, d.substitute_ndc AS substitute_ndc,
                sub.generic_name AS substitute, sub.labeler AS substitute_labeler,
                d.reason AS reason, d.outcome AS outcome, d.outcome_days AS outcome_days,
-               d.synthetic AS synthetic
+               d.synthetic AS synthetic, d.by AS by, d.at AS at
         ORDER BY e.opened DESC, d.id""", {"ndcs": ndcs})
     return run.done(rows)
 

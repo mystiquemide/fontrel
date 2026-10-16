@@ -1,19 +1,6 @@
-import type { Step } from "@/lib/api";
-import { MONTHS } from "@/lib/api";
+import { MONTHS, shortDate, type MemoryRow, type Step } from "@/lib/api";
 
-type Row = {
-  decision: string;
-  episode_label: string;
-  opened: string;
-  action: "approved" | "rejected";
-  substitute_ndc: string;
-  substitute: string;
-  substitute_labeler: string;
-  reason: string;
-  outcome: string | null;
-  outcome_days: number | null;
-  synthetic?: boolean;
-};
+type Row = MemoryRow;
 
 function month(iso: string) {
   const [y, m] = iso.split("-").map(Number);
@@ -24,9 +11,9 @@ function title(s: string) {
   return s.replace(/\w\S*/g, (w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
 }
 
-export function MemoryList({ steps, running }: { steps: Step[]; running: boolean }) {
+export function MemoryList({ steps, running, live }: { steps: Step[]; running: boolean; live: Row[] | null }) {
   const step = steps.find((s) => s.tool === "recall_memory");
-  const rows = step ? (step.data as Row[]) : null;
+  const rows = live ?? (step ? (step.data as Row[]) : null);
   return (
     <section>
       <h2 className="font-display text-[28px] leading-tight">Your hospital&rsquo;s memory</h2>
@@ -58,7 +45,7 @@ export function MemoryList({ steps, running }: { steps: Step[]; running: boolean
                   <p className="mt-1 text-[14px] text-ink-3">
                     {r.outcome === "held" && r.outcome_days ? `Held ${r.outcome_days} days · ` : ""}
                     {r.episode_label}
-                    {r.synthetic ? " · Synthetic record" : ""}
+                    {r.synthetic ? " · Synthetic record" : r.by ? ` · ${r.by}${r.at ? `, ${shortDate(r.at)}` : ""}` : ""}
                   </p>
                 </div>
               </li>

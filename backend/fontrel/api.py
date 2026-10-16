@@ -159,7 +159,7 @@ def decide(req: DecisionRequest):
     if req.substitute_ndc not in valid:
         raise HTTPException(422, "substitute is not an equivalent of the shortage product")
     sub = valid[req.substitute_ndc]
-    ep_id = "ep-" + hashlib.sha1(sid.encode()).hexdigest()[:10]
+    ep_id = _episode_id(sid)
     dec_id = f"dec-{ep_id[3:]}-{req.substitute_ndc}"
     now = datetime.now(timezone.utc).isoformat(timespec="seconds")
     graph.tenant(tenant).query("""
@@ -181,6 +181,18 @@ def decide(req: DecisionRequest):
         "reason": req.reason, "by": req.by, "status": sub["status"]})
     return {"decision": dec_id, "episode": ep_id, "action": req.action, "substitute_ndc": req.substitute_ndc,
             "status_at_decision": sub["status"], "at": now}
+
+
+def _episode_id(shortage_id: str) -> str:
+    return "ep-" + hashlib.sha1(shortage_id.encode()).hexdigest()[:10]
+
+
+@app.get("/api/recall")
+def recall(tenant: str = Query(...), shortage_id: str = Query(...)):
+    """Read-only. The memory rows a trace would recall, plus the episode id decisions on this shortage use."""
+    t = _tenant(tenant)
+    sid = _shortage(t, shortage_id)
+    return {"episode": _episode_id(sid), "rows": tools.recall_memory(t, sid).rows}
 
 
 @app.get("/api/memory")

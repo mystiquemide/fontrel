@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
-import { formatDate, getJSON, streamTrace, type Shortage, type Step, type TraceAnswer } from "@/lib/api";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { formatDate, getJSON, postDecision, streamTrace, type MemoryRow, type Recall, type Shortage, type Step, type TraceAnswer } from "@/lib/api";
 import { ExposedList, SubstituteList } from "./Lists";
 import { Banner } from "./Banner";
 import { MemoryList } from "./Memory";
@@ -25,6 +25,32 @@ export function Trace() {
   const [failure, setFailure] = useState<{ key: string; message: string } | null>(null);
 
   const headerKey = `${h}|${shortageId}`;
+  const [recall, setRecall] = useState<{ key: string; value: Recall } | null>(null);
+  const live = recall?.key === headerKey ? recall.value : null;
+
+  const loadRecall = useCallback(
+    (signal?: AbortSignal) =>
+      getJSON<Recall>(`/api/recall?tenant=${encodeURIComponent(h)}&shortage_id=${encodeURIComponent(shortageId)}`, signal).then(
+        (value) => setRecall({ key: headerKey, value }),
+      ),
+    [h, shortageId, headerKey],
+  );
+
+  useEffect(() => {
+    const ctl = new AbortController();
+    loadRecall(ctl.signal).catch(() => {});
+    return () => ctl.abort();
+  }, [loadRecall]);
+
+  const decisions = useMemo(
+    () => new Map((live?.rows ?? []).filter((r) => r.episode === live?.episode).map((r) => [r.substitute_ndc, r] as [string, MemoryRow])),
+    [live],
+  );
+
+  async function decide(ndc: string, action: "approved" | "rejected", reason: string, by: string) {
+    await postDecision({ tenant: h, shortage_id: shortageId, substitute_ndc: ndc, action, reason, by });
+    await loadRecall();
+  }
   const head: Header = header?.key === headerKey ? header.value : { kind: "loading" };
   const stepList = steps.key === runKey ? steps.list : [];
   const done = answer?.key === runKey ? answer.value : null;
@@ -123,8 +149,8 @@ export function Trace() {
         <div className="mt-12 grid items-start gap-12 lg:grid-cols-[3fr_2fr]">
           <div className="flex min-w-0 flex-col gap-14">
             <ExposedList steps={stepList} running={running} shortageLabeler={head.kind === "ready" ? head.s.labeler : undefined} />
-            <SubstituteList steps={stepList} running={running} />
-            <MemoryList steps={stepList} running={running} />
+            <SubstituteList steps={stepList} running={running} decisions={decisions} onDecide={decide} />
+            <MemoryList steps={stepList} running={running} live={live?.rows ?? null} />
           </div>
           <Reasoning steps={stepList} answer={done} running={running} />
         </div>

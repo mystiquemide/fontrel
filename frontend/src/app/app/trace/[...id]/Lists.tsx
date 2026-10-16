@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { sortExposed, type ExposedRow, type Step } from "@/lib/api";
+import { sortExposed, type ExposedRow, type MemoryRow, type Step } from "@/lib/api";
+import { Decide } from "./Decide";
 
 type Sub = {
   product_ndc: string;
@@ -108,7 +109,17 @@ const SUB_LABEL = {
   shares_site: { tone: "exposed", text: "Shares the plant", row: "bg-exposed-tint" },
 } as const;
 
-export function SubstituteList({ steps, running }: { steps: Step[]; running: boolean }) {
+export function SubstituteList({
+  steps,
+  running,
+  decisions,
+  onDecide,
+}: {
+  steps: Step[];
+  running: boolean;
+  decisions: Map<string, MemoryRow>;
+  onDecide: (ndc: string, action: "approved" | "rejected", reason: string, by: string) => Promise<void>;
+}) {
   const [all, setAll] = useState(false);
   const step = steps.find((s) => s.tool === "find_substitutes");
   const rows = step ? (step.data as Sub[]) : null;
@@ -151,6 +162,7 @@ export function SubstituteList({ steps, running }: { steps: Step[]; running: boo
                     {r.on_formulary ? "On your formulary" : "Not on your formulary"}
                     {r.in_shortage && " · Also in shortage"}
                   </p>
+                  <Decide current={decisions.get(r.product_ndc)} onSave={(a, reason, by) => onDecide(r.product_ndc, a, reason, by)} />
                 </li>
               );
             })}

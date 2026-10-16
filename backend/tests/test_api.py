@@ -174,3 +174,17 @@ def test_anchor_is_current_and_cross_company():
     assert a["product_ndc"] == ANCHOR_NDC and a["cross_company_exposed"] > 0
     current = {r["shortage_id"] for r in c.get("/api/shortages?tenant=mercy").json()}
     assert a["shortage_id"] in current
+
+
+def test_recall_shows_new_decision_in_current_episode(cleanup):
+    sid = anchor()
+    before = c.get("/api/recall", params={"tenant": "mercy", "shortage_id": sid}).json()
+    sub = next(n["id"] for n in _sub()["nodes"] if n.get("role") == "substitute")
+    made = c.post("/api/decisions", json={"tenant": "mercy", "shortage_id": sid, "substitute_ndc": sub,
+                                          "action": "approved", "by": "Test Pharmacist"}).json()
+    cleanup.append((made["decision"], made["episode"]))
+    after = c.get("/api/recall", params={"tenant": "mercy", "shortage_id": sid}).json()
+    assert after["episode"] == made["episode"] == before["episode"]
+    new = [r for r in after["rows"] if r["decision"] == made["decision"]]
+    assert len(after["rows"]) == len(before["rows"]) + 1
+    assert new and new[0]["by"] == "Test Pharmacist" and new[0]["episode"] == made["episode"]
