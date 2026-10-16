@@ -1,5 +1,7 @@
 # fontrel
 
+[![CI](https://github.com/mystiquemide/fontrel/actions/workflows/ci.yml/badge.svg)](https://github.com/mystiquemide/fontrel/actions/workflows/ci.yml)
+
 **See the shortage behind the shortage.**
 
 When a drug goes short, a hospital pharmacy usually finds out one product at a time. Fontrel follows the shortage to the plant listed on the drug's FDA label, finds the other products on your formulary made at that same plant, and lists candidate alternatives with no plant in common. A pharmacist approves or rejects each one, and Fontrel remembers that decision the next time the same drug is short.
@@ -358,3 +360,7 @@ At runtime, Fontrel calls `openai/gpt-oss-120b` on Groq to choose tools and writ
 ## Credits
 
 Photos from [Unsplash](https://unsplash.com/license) by National Cancer Institute, Árpád Czapp and Diana Polekhina. Fonts are Newsreader, Instrument Sans and Fragment Mono from Google Fonts.
+
+## License
+
+[MIT](LICENSE)
