@@ -106,3 +106,48 @@ def test_memory_lists_seeded_episodes():
     eps = c.get("/api/memory?tenant=mercy").json()
     assert {"ep-2026-04-ropi", "ep-2026-07-bupi"} <= {e["episode"] for e in eps}
     assert c.get("/api/memory?tenant=lakeside").json() == []
+
+
+def _events(resp):
+    return [(b.split("\n")[0][7:], json.loads(b.split("\n")[1][6:])) for b in resp.text.strip().split("\n\n")]
+
+
+def test_replay_flagged(monkeypatch, cleanup):
+    from fontrel import cache
+    sid = anchor()
+    g = graph.tenant("mercy")
+    g.query("MATCH (t:Trace) DETACH DELETE t")
+    calls = []
+
+    def fake_run(tenant, shortage_id, model, on_step=None):
+        calls.append(1)
+        step = {"n": 1, "tool": "get_shortage", "rows": 1, "ms": 1.0, "queries": [], "data": []}
+        if on_step:
+            on_step(step)
+        return {"tenant": tenant, "shortage_id": shortage_id, "model": model, "degraded": False,
+                "degraded_reason": None, "dropped_ndcs": [], "steps": [step],
+                "answer": {"summary": "s", "exposed": [], "substitutes": [], "memory": []}, "elapsed_s": 0.1}
+    monkeypatch.setattr(agent, "run_trace", fake_run)
+    body = {"tenant": "mercy", "shortage_id": sid}
+
+    first = _events(c.post("/api/trace", json=body))[-1][1]
+    second = _events(c.post("/api/trace", json=body))[-1][1]
+    assert first["replayed"] is False and second["replayed"] is True and second["cached_at"]
+    assert len(calls) == 1
+
+    # a new decision changes memory, so the next trace must run fresh
+    sub = next(n["id"] for n in _sub()["nodes"] if n.get("role") == "substitute")
+    d = c.post("/api/decisions", json={**body, "substitute_ndc": sub, "action": "approved"}).json()
+    cleanup.append((d["decision"], d["episode"]))
+    third = _events(c.post("/api/trace", json=body))[-1][1]
+    assert third["replayed"] is False and len(calls) == 2
+
+    fresh = _events(c.post("/api/trace", json={**body, "fresh": True}))[-1][1]
+    assert fresh["replayed"] is False and len(calls) == 3
+    g.query("MATCH (t:Trace) DETACH DELETE t")
+
+
+def test_degraded_trace_not_cached(no_llm):
+    graph.tenant("mercy").query("MATCH (t:Trace) DETACH DELETE t")
+    c.post("/api/trace", json={"tenant": "mercy", "shortage_id": anchor()})
+    assert graph.tenant("mercy").query("MATCH (t:Trace) RETURN count(t)").result_set == [[0]]

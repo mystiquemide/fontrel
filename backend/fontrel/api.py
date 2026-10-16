@@ -11,7 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
-from . import agent, graph, tools
+from . import agent, cache, graph, tools
 from .config import settings
 
 app = FastAPI(title="Fontrel", version="0.1.0")
@@ -66,6 +66,7 @@ class TraceRequest(BaseModel):
     tenant: str
     shortage_id: str
     fast: bool = False
+    fresh: bool = False  # true skips the saved trace and runs the agent again
 
 
 @app.post("/api/trace")
@@ -78,7 +79,15 @@ def trace(req: TraceRequest):
 
     def work():
         try:
-            out = agent.run_trace(tenant, sid, model, on_step=lambda s: events.put(("step", s)))
+            saved = None if req.fresh else cache.get(tenant, sid, model)
+            if saved:
+                for step in saved["steps"]:
+                    events.put(("step", step))
+                out = saved
+            else:
+                out = agent.run_trace(tenant, sid, model, on_step=lambda s: events.put(("step", s)))
+                out["replayed"] = False
+                cache.put(tenant, out)
             events.put(("answer", {k: v for k, v in out.items() if k != "steps"}))
         except Exception as e:  # graph down mid-trace and similar
             events.put(("error", {"error": f"{type(e).__name__}: {e}"}))
