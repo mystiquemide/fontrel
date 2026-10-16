@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Mark } from "./Logo";
 
 const CREDITS = [
@@ -16,6 +17,9 @@ export function Footer() {
           <a className="link" href="https://github.com/mystiquemide/graph-hack">
             GitHub
           </a>
+          <Link className="link" href="/#sources">
+            Data sources
+          </Link>
         </div>
         <p>
           Photos on Unsplash by{" "}
