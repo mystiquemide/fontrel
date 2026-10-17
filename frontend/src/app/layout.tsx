@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Fragment_Mono, Instrument_Sans, Newsreader } from "next/font/google";
+import { SkipLink } from "@/components/SkipLink";
 import "./globals.css";
 
 const newsreader = Newsreader({
@@ -37,9 +38,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${newsreader.variable} ${instrument.variable} ${fragment.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col">
-        <a href="#main" className="skip-link">
-          Skip to content
-        </a>
+        <SkipLink />
         {children}
       </body>
     </html>

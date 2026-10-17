@@ -3,7 +3,7 @@ import { Logo } from "@/components/Logo";
 
 export default function NotFound() {
   return (
-    <main id="main" className="wrap flex flex-1 flex-col items-start justify-center py-24">
+    <main id="main" tabIndex={-1} className="wrap focus:outline-none flex flex-1 flex-col items-start justify-center py-24">
       <Logo size={32} />
       <h1 className="h2 mt-10">
         This page <span className="em">isn&rsquo;t here.</span>

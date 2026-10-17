@@ -176,11 +176,11 @@ export function Trace() {
             { id: "memory", label: "Past decisions", n: (live?.rows ?? stepList.find((x) => x.tool === "recall_memory")?.data ?? []).length },
             { id: "how", label: "How Fontrel got here" },
           ].map((j) => (
-            <a key={j.id} href={`#${j.id}`} onClick={(e) => { e.preventDefault(); document.getElementById(j.id)?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" }); }}
+            <button type="button" key={j.id} onClick={() => document.getElementById(j.id)?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" })}
               className="rounded-full border-[1.5px] border-line px-4 py-2 hover:border-clay">
               {j.label}
               {typeof j.n === "number" && <span className="ml-1.5 font-mono text-[13px] text-ink-3">{j.n}</span>}
-            </a>
+            </button>
           ))}
         </nav>
       )}

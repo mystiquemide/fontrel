@@ -4,8 +4,9 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { NavShell } from "../NavShell";
 import { ScrollLink } from "./ScrollLink";
+import type { SectionId } from "./sections";
 
-const LINKS = [
+const LINKS: { to: SectionId; label: string }[] = [
   { to: "how", label: "How it works" },
   { to: "trace", label: "What we trace" },
   { to: "sources", label: "Sources" },

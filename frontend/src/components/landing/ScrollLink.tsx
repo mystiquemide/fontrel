@@ -1,19 +1,21 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { SECTIONS, scrollToSection, type SectionId } from "./sections";
 
-/** Scrolls to a section on the landing page without adding #hash to the address bar. */
-export function ScrollLink({ to, className, children }: { to: string; className?: string; children: ReactNode }) {
+/** Link to a landing section by its clean URL, such as /trace. On the landing page it scrolls
+ * there and updates the address bar; anywhere else it navigates to that URL. */
+export function ScrollLink({ to, className, children }: { to: SectionId; className?: string; children: ReactNode }) {
+  const href = `/${SECTIONS[to].path}`;
   return (
     <a
-      href={`/#${to}`}
+      href={href}
       className={className}
       onClick={(e) => {
-        const el = document.getElementById(to);
-        if (!el) return;
+        if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+        if (!scrollToSection(to)) return;
         e.preventDefault();
-        const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-        el.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
+        window.history.pushState(null, "", href);
       }}
     >
       {children}
