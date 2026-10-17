@@ -1,0 +1,49 @@
+# Backend for a server that already runs Coolify (or any Traefik on the "coolify" network).
+# Traefik owns ports 80 and 443 and issues the certificate, so there is no Caddy here.
+# Run from the repository root: docker compose -f deploy/docker-compose.coolify.yml --env-file .env up -d --build
+services:
+  falkordb:
+    image: falkordb/falkordb:latest
+    restart: unless-stopped
+    environment:
+      - REDIS_ARGS=--appendonly yes --appendfsync everysec
+    volumes:
+      - falkordb-data:/var/lib/falkordb/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 20
+
+  api:
+    build:
+      context: ..
+      dockerfile: backend/Dockerfile
+    restart: unless-stopped
+    env_file: ../.env
+    environment:
+      - FALKORDB_HOST=falkordb
+      - FALKORDB_PORT=6379
+    volumes:
+      - ingest-cache:/app/data
+    networks:
+      - default
+      - coolify
+    depends_on:
+      falkordb:
+        condition: service_healthy
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=coolify
+      - traefik.http.routers.fontrel-api.rule=Host(`${API_DOMAIN}`)
+      - traefik.http.routers.fontrel-api.entrypoints=https
+      - traefik.http.routers.fontrel-api.tls=true
+      - traefik.http.routers.fontrel-api.tls.certresolver=letsencrypt
+      - traefik.http.services.fontrel-api.loadbalancer.server.port=8000
+
+networks:
+  coolify:
+    external: true
+
+volumes:
+  falkordb-data:
+  ingest-cache:

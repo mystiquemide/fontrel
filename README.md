@@ -163,6 +163,13 @@ docker compose -f deploy/docker-compose.yml cp dmf-list.xlsx api:/tmp/dmf.xlsx
 docker compose -f deploy/docker-compose.yml exec api python -m ingest.dmf_file /tmp/dmf.xlsx
 ```
 
+If the server already runs Coolify, its Traefik proxy holds ports 80 and 443. Use the Coolify file instead, which skips Caddy and lets Traefik route `API_DOMAIN` to the API and issue the certificate:
+
+```bash
+docker compose -f deploy/docker-compose.coolify.yml --env-file .env up -d --build
+docker compose -f deploy/docker-compose.coolify.yml exec api sh -c "python -m ingest.run && python -m ingest.synth"
+```
+
 ### Frontend on Vercel
 
 Import the repository in Vercel, set the root directory to `frontend`, and add these environment variables:
