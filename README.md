@@ -10,6 +10,8 @@ It runs on a [FalkorDB](https://www.falkordb.com/) graph built from public FDA d
 
 Live: [fontrel.midelabs.xyz](https://fontrel.midelabs.xyz). The hospitals in it are synthetic, and the FDA data is real.
 
+[![Watch the Fontrel demo (2:22)](assets/demo-thumbnail.jpg)](https://youtu.be/1hFyxPFSblg)
+
 ![Fontrel landing page](assets/landing.jpg)
 
 ## A real example
