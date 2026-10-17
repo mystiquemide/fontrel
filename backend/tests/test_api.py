@@ -238,7 +238,9 @@ def test_rejecting_a_candidate_moves_it_down_next_time(cleanup):
     sid = anchor()
     before = tools.find_substitutes("mercy", sid).rows
     top = before[0]
-    peers = [r["product_ndc"] for r in before if r["status"] == top["status"] and r["product_ndc"] != top["product_ndc"]]
+    # peers the hospital already rejected sort among themselves, so compare against the rest
+    peers = [r["product_ndc"] for r in before if r["status"] == top["status"] and r["product_ndc"] != top["product_ndc"]
+             and not (r["prior_decision"] and r["prior_decision"]["action"] == "rejected")]
     assert peers, "needs a second candidate with the same status"
     d = c.post("/api/decisions", json={"tenant": "mercy", "shortage_id": sid, "substitute_ndc": top["product_ndc"],
                                        "action": "rejected", "reason": "test"}).json()
