@@ -47,16 +47,30 @@ export function AppHeader() {
 
   return (
     <NavShell
-      items={NAV.map((n) => ({
+      items={[
+        {
+          key: "home",
+          label: "Home",
+          node: (cls: string) => (
+            <Link href="/" className={`${cls} inline-flex items-center gap-1.5`}>
+              <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+                <path d="M8.5 3 L4.5 7 L8.5 11" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              Home
+            </Link>
+          ),
+        },
+        ...NAV.map((n) => ({
         key: n.href,
         label: n.label,
         active: active(n.href),
-        node: (cls) => (
+        node: (cls: string) => (
           <Link href={`${n.href}?h=${current}`} className={cls} aria-current={active(n.href) ? "page" : undefined}>
             {n.label}
           </Link>
         ),
-      }))}
+      })),
+      ]}
       right={
         <>
           <span className="label hidden lg:inline">Synthetic hospital</span>
