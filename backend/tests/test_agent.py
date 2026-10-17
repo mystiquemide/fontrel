@@ -7,7 +7,7 @@ import pytest
 from fontrel import agent
 from fontrel.llm import LLMUnavailable
 
-ANCHOR_NDC = "55150-249"
+ANCHOR_NDC = "55150-172"
 
 
 def sid():

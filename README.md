@@ -12,7 +12,7 @@ It runs on a [FalkorDB](https://www.falkordb.com/) graph built from public FDA d
 
 ## A real example
 
-On October 16, 2026, Eugia US bupivacaine injection (NDC 55150-249) was on the FDA shortage list. Its FDA label lists one manufacturing plant: Eugia Pharma Specialities Limited (DUNS 650498244).
+On October 16, 2026, Eugia US bupivacaine injection (NDC 55150-172) was on the FDA shortage list. Its FDA label lists one manufacturing plant: Eugia Pharma Specialities Limited (DUNS 650498244).
 
 That same plant also makes products sold under other company names, including Aurobindo ketorolac and McKesson SKY heparin. Neither had a shortage notice. That isn't proof they will run short, but it is shared exposure worth a look. A shortage list shows you the bupivacaine. The graph shows you the ketorolac and heparin too.
 

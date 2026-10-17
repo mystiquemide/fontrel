@@ -5,7 +5,7 @@ from pathlib import Path
 
 from fontrel import tools
 
-ANCHOR_NDC = "55150-249"  # Eugia bupivacaine, current shortage, seeded in Mercy memory
+ANCHOR_NDC = "55150-172"  # Eugia bupivacaine, current shortage, seeded in Mercy memory
 
 
 def anchor_shortage():

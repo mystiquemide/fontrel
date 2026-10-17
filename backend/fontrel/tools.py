@@ -247,7 +247,7 @@ def ingredient_summary() -> ToolResult:
     return run.done(rows)
 
 
-def anchor_shortage(tenant_id: str, preferred_ndc: str = "55150-249") -> ToolResult:
+def anchor_shortage(tenant_id: str, preferred_ndc: str = "55150-172") -> ToolResult:
     """The shortage used to show a real case: the preferred product if it is still a current
     shortage on this formulary, otherwise the one with the most exposed products from other
     companies made at the same plant."""

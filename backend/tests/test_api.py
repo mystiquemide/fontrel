@@ -8,7 +8,7 @@ from fontrel import agent, api, graph
 from fontrel.llm import LLMUnavailable
 
 c = TestClient(api.app)
-ANCHOR_NDC = "55150-249"
+ANCHOR_NDC = "55150-172"
 
 
 def anchor():
