@@ -8,15 +8,21 @@ When a drug goes short, a hospital pharmacy usually finds out one product at a t
 
 It runs on a [FalkorDB](https://www.falkordb.com/) graph built from public FDA data.
 
+Live: [fontrel.midelabs.xyz](https://fontrel.midelabs.xyz). The hospitals in it are synthetic, and the FDA data is real.
+
 ![Fontrel landing page](assets/landing.jpg)
 
 ## A real example
 
-On October 16, 2026, Eugia US bupivacaine injection (NDC 55150-172) was on the FDA shortage list. Its FDA label lists one manufacturing plant: Eugia Pharma Specialities Limited (DUNS 650498244).
+On October 17, 2026, the FDA shortage list included Eugia US bupivacaine injection (NDC 55150-172). Its FDA label lists one manufacturing plant: Eugia Pharma Specialities Limited (DUNS 650498244). Out of 292 plants in the graph, that one ranks first by PageRank.
 
-That same plant also makes products sold under other company names, including Aurobindo ketorolac and McKesson SKY heparin. Neither had a shortage notice. That isn't proof they will run short, but it is shared exposure worth a look. A shortage list shows you the bupivacaine. The graph shows you the ketorolac and heparin too.
+For the synthetic Mercy General Hospital, a trace on that shortage finds:
 
-You can check this yourself: open the [ketorolac label on DailyMed](https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=007a4da5-d794-416c-94b3-6ee9e7842c52) and look at the establishment section.
+- **69 formulary products made at the same plant**, 31 of them with no shortage notice. 11 are sold under other company names, including Aurobindo ketorolac and McKesson SKY heparin. A shortage list shows you the bupivacaine. The graph shows you the ketorolac and heparin too. That's shared exposure worth a look, not proof they'll run short.
+- **Four alternatives worth a first look:** NorthStar Rx 72603-700 and 72603-800, and OneSource 83270-164 and 83270-167. All four are on formulary, have no shortage notice, and list their own plants.
+- **The hospital's memory:** in July, Mercy approved Hospira 0409-1165 for this drug. That product is now in shortage itself, so it's listed below the four above.
+
+You can check the plant yourself: open the [Aurobindo ketorolac label on DailyMed](https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=007a4da5-d794-416c-94b3-6ee9e7842c52) and look at the establishment section.
 
 ![Trace screen](assets/trace.png)
 
@@ -384,9 +390,20 @@ docker-compose.yml  FalkorDB with append-only persistence, bound to localhost
 | [DailyMed](https://dailymed.nlm.nih.gov/dailymed/) | Manufacturing plants from each label's establishment section | Public. Not every label lists its plants. |
 | [FDA Drug Master File list](https://www.fda.gov/drugs/drug-master-files-dmfs/list-drug-master-files-dmfs) | Registered ingredient suppliers | Public. Registrations, not confirmed supply, and the list has no country column. |
 
-Fontrel tracks 38 ingredients that hospitals often see in shortage, including bupivacaine, lidocaine and heparin. The list is in [`backend/ingest/drugs.yaml`](backend/ingest/drugs.yaml). The data was loaded on October 16, 2026, and counts change slightly whenever it is reloaded.
+Fontrel tracks 38 ingredients that hospitals often see in shortage, including bupivacaine, lidocaine and heparin. The list is in [`backend/ingest/drugs.yaml`](backend/ingest/drugs.yaml). The live deployment was loaded on October 17, 2026:
 
-**The two hospitals, Mercy General and Lakeside Community, are synthetic.** Their formularies and past decisions were generated for this project and are labeled synthetic in the app. No patient or hospital data is used.
+| | Count |
+|---|---|
+| Current FDA shortage records | 974 |
+| Products | 4,476 |
+| DailyMed labels read | 7,030 |
+| Manufacturing plants | 292 |
+| Product pairs with matching ingredients, strength, form and route | 32,755 |
+| Drug Master File supplier registrations | 476, from 244 suppliers |
+
+Counts change slightly whenever the data is reloaded.
+
+**The two hospitals, Mercy General (150 formulary items, 113 shortage records) and Lakeside Community (80 items, 52 records), are synthetic.** Their formularies and past decisions were generated for this project and are labeled synthetic in the app. No patient or hospital data is used.
 
 ## Limits
 
