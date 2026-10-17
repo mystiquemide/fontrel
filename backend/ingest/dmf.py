@@ -25,8 +25,10 @@ def norm(name: str) -> str:
     return re.sub(r"[^A-Z0-9]+", " ", name.upper()).strip()
 
 
-def dmf_rows(terms: list[str]) -> list[dict]:
-    data = cached_get(URL, kind="dmf", binary=True)
+def dmf_rows(terms: list[str], data: bytes | None = None) -> list[dict]:
+    """Rows from the DMF list. Pass data to parse a file downloaded by hand instead of fetching it."""
+    if data is None:
+        data = cached_get(URL, kind="dmf", binary=True)
     ws = openpyxl.load_workbook(io.BytesIO(data), read_only=True).worksheets[0]
     rows = []
     header = None

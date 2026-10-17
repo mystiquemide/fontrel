@@ -130,6 +130,50 @@ python -m pytest -q
 
 67 tests. Most run against a live FalkorDB loaded with real FDA data, and the agent tests replace the AI model with a scripted stand-in. They cover data loading and reloading, strength matching, every query, tenant separation, the agent's guardrails, cancellation, the trace cache and the API. Because they use live FDA data, a test can fail if a record it relies on leaves the FDA list.
 
+## Deploy
+
+The frontend runs on Vercel. The backend (FalkorDB, the API and Caddy for HTTPS) runs on any Linux server with Docker, such as a $5 to $12 VPS with 2 GB of RAM.
+
+### Backend on a server
+
+You need a hostname for the API. If you don't have a domain, `<server-ip>.sslip.io` works, for example `203.0.113.7.sslip.io`. Open ports 80 and 443.
+
+```bash
+git clone https://github.com/mystiquemide/fontrel.git && cd fontrel
+cp .env.example .env    # add GROQ_API_KEY, API_DOMAIN and CORS_ORIGINS (see below)
+docker compose -f deploy/docker-compose.yml --env-file .env up -d --build
+docker compose -f deploy/docker-compose.yml exec api sh -c "python -m ingest.run && python -m ingest.synth"
+curl https://$API_DOMAIN/api/health
+```
+
+Settings for the server's `.env`:
+
+| Variable | Example |
+|---|---|
+| `GROQ_API_KEY` | your key |
+| `API_DOMAIN` | `203.0.113.7.sslip.io` |
+| `CORS_ORIGINS` | `https://your-app.vercel.app` |
+
+FalkorDB and the API are only reachable inside Docker. Caddy is the only public entry point and gets the HTTPS certificate on its own.
+
+fda.gov blocks some server IPs. If the load prints `skipped the FDA Drug Master File list`, download the file in a browser from the link it prints, copy it to the server, and load it:
+
+```bash
+docker compose -f deploy/docker-compose.yml cp dmf-list.xlsx api:/tmp/dmf.xlsx
+docker compose -f deploy/docker-compose.yml exec api python -m ingest.dmf_file /tmp/dmf.xlsx
+```
+
+### Frontend on Vercel
+
+Import the repository in Vercel, set the root directory to `frontend`, and add these environment variables:
+
+| Variable | Value |
+|---|---|
+| `BACKEND_URL` | `https://<API_DOMAIN>` |
+| `SITE_URL` | your Vercel URL, used for link previews |
+
+The app forwards `/api/*` to `BACKEND_URL`, so the browser only ever talks to Vercel.
+
 ## How it works
 
 ```
