@@ -1,5 +1,6 @@
 import { Footer } from "@/components/Footer";
 import { Compare } from "./Compare";
+import { BuiltOn } from "./BuiltOn";
 import { DataSources } from "./DataSources";
 import { Faq } from "./Faq";
 import { FinalCta } from "./FinalCta";
@@ -20,6 +21,7 @@ export function Landing({ section }: { section?: SectionId }) {
         <WhatWeTrace />
         <Compare />
         <DataSources />
+        <BuiltOn />
         <Faq />
         <FinalCta />
       </main>
