@@ -97,6 +97,10 @@ def _ndcs_in(results: list[tools.ToolResult]) -> set[str]:
     return seen
 
 
+class Cancelled(Exception):
+    """Raised by the caller's step callback when the browser has gone, to stop the run."""
+
+
 REQUIRED = ("get_shortage", "find_site_exposure", "find_substitutes", "recall_memory")
 
 
@@ -225,6 +229,8 @@ def run_trace(tenant_id: str, shortage_id: str, model: str | None = None, on_ste
                     result = call_tool(tenant_id, tc.function.name, args, shortage_id)
                     record(tc.function.name, args, result, "agent")
                     content = _compact(result)
+                except Cancelled:
+                    raise
                 except Exception as e:  # unknown tool or bad args: tell the model, keep going
                     content = json.dumps({"error": f"{type(e).__name__}: {e}"})
                 messages.append({"role": "tool", "tool_call_id": tc.id, "content": content})

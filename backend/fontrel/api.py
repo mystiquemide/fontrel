@@ -27,8 +27,7 @@ _running: set[tuple] = set()
 _running_lock = threading.Lock()
 
 
-class Cancelled(Exception):
-    pass
+Cancelled = agent.Cancelled
 
 
 def _tenant(tenant_id: str) -> str:
@@ -91,7 +90,7 @@ def trace(req: TraceRequest):
     model = settings.llm_model_fast if req.fast else settings.llm_model
     events: queue.Queue = queue.Queue()
     cancelled = threading.Event()
-    key = (tenant, sid, model)
+    key = (tenant, sid)  # one fresh trace per hospital and shortage, whichever model
 
     def on_step(step):
         if cancelled.is_set():

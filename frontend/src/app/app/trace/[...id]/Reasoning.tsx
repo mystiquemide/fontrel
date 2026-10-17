@@ -70,7 +70,10 @@ export function Reasoning({ steps, answer, running, stale }: { steps: Step[]; an
         ) : answer.degraded ? (
           <p className="mt-3 text-ink-2">No written summary this time. The lists come straight from the graph.</p>
         ) : (
-          <p className="mt-3 font-display text-[21px] leading-snug">{summary}</p>
+          <>
+            <p className="mt-3 font-display text-[21px] leading-snug">{summary}</p>
+            <p className="mt-3 text-[14px] text-ink-3">Written by the AI model from the query results above. Check any claim against the lists before you act on it.</p>
+          </>
         )}
         {answer && stale && (
           <p className="mt-3 text-[14px] text-ink-2">This summary was written before your latest decision. Run a fresh trace to include it.</p>

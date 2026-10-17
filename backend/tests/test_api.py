@@ -224,12 +224,12 @@ def test_second_fresh_trace_for_same_shortage_is_refused(monkeypatch):
         return {"tenant": tenant, "shortage_id": shortage_id, "model": model, "degraded": True, "steps": [],
                 "answer": {}, "elapsed_s": 0}
     monkeypatch.setattr(agent, "run_trace", slow_run)
-    api._running.add(("mercy", sid, api.settings.llm_model))
+    api._running.add(("mercy", sid))
     try:
         ev = _events(c.post("/api/trace", json={"tenant": "mercy", "shortage_id": sid, "fresh": True}))
         assert ev[-1][0] == "error" and ev[-1][1]["error"] == "busy"
     finally:
-        api._running.discard(("mercy", sid, api.settings.llm_model))
+        api._running.discard(("mercy", sid))
         gate.set()
 
 

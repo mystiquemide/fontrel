@@ -171,3 +171,19 @@ def test_early_answer_still_runs_required_tools(monkeypatch):
     assert out["complete"] and not out["degraded"]
     assert {"find_site_exposure", "find_substitutes", "recall_memory"} <= set(tools_run)
     assert set(out["completed_by_server"]) == {"find_site_exposure", "find_substitutes", "recall_memory"}
+
+
+def test_cancel_stops_before_the_next_model_call(monkeypatch):
+    calls = []
+
+    def chat(*a, **k):
+        calls.append(1)
+        return NS(choices=[NS(message=NS(tool_calls=[call("find_site_exposure", {})], content=""))])
+    monkeypatch.setattr(agent, "chat", chat)
+
+    def on_step(step):
+        if step["tool"] == "find_site_exposure":
+            raise agent.Cancelled()
+    with pytest.raises(agent.Cancelled):
+        agent.run_trace("mercy", sid(), "m", on_step=on_step)
+    assert len(calls) == 1

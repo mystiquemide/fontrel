@@ -11,7 +11,7 @@ function when(iso: string) {
 
 export function Banner({ answer, onFresh }: { answer: TraceAnswer; onFresh: () => void }) {
   let text: string | null = null;
-  if (answer.degraded) text = "The AI model is busy, so this answer comes straight from the graph without a written summary.";
+  if (answer.degraded) text = "The AI model wasn't available for this trace, so this answer comes straight from the graph without a written summary.";
   else if (answer.replayed && answer.cached_at)
     text = `Saved trace from ${when(answer.cached_at)}. Your hospital's memory has not changed since.`;
   if (!text) return null;

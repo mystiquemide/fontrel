@@ -163,7 +163,7 @@ export function LiveCase() {
             ))}
           </ol>
           {ready && (
-            <p className="label mt-6 text-center">Live from today&rsquo;s FDA shortage list and a synthetic hospital formulary</p>
+            <p className="label mt-6 text-center">From the loaded FDA shortage list and a synthetic hospital formulary</p>
           )}
         </div>
       </section>
@@ -174,7 +174,7 @@ export function LiveCase() {
         <section id="case" className="scroll-mt-28 md:scroll-mt-20 bg-panel py-[clamp(48px,7vw,96px)]">
           <div className="wrap">
             <h2 className="h2 max-w-[22ch]">
-              A real case from <span className="em">today&rsquo;s</span> shortage list.
+              A real case from the <span className="em">FDA</span> shortage list.
             </h2>
             <div className="mt-12 grid items-center gap-3 lg:grid-cols-[1fr_auto_1fr_auto_1.1fr]">
               <Chip label="Shortage" title={`${title(d!.product!.label)}, ${company(d!.product!.labeler)}`} sub="FDA shortage notice" />
@@ -192,7 +192,7 @@ export function LiveCase() {
               </div>
             </div>
             <p className="mt-10 max-w-[60ch] text-[19px] text-ink-2">
-              {d!.hidden.length === 1 ? "This product has" : "Neither of these has"} a shortage notice in today&rsquo;s FDA list. {d!.hidden.length === 1 ? "It is" : "They are"} made at the same plant, under{" "}
+              {d!.hidden.length === 1 ? "This product has" : "Neither of these has"} a shortage notice in the FDA list Fontrel loaded. {d!.hidden.length === 1 ? "It is" : "They are"} made at the same plant, under{" "}
               {d!.hidden.length === 1 ? "another company's name" : "other companies' names"}.
             </p>
             <p className="mt-3 text-[15px] text-ink-3">

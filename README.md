@@ -90,7 +90,7 @@ python -m ingest.run
 python -m ingest.synth
 ```
 
-`ingest.run` downloads current FDA data and builds the supply graph. It takes about two minutes and caches the files in `data/raw`, so later runs are faster. To pull fresh data later, run `python -m ingest.run --refresh`. Shortages that have left the FDA list are removed on each load. `ingest.synth` creates the two synthetic hospitals.
+`ingest.run` downloads current FDA data and builds the supply graph. It takes about two minutes and caches the files in `data/raw`, so later runs are faster. To pull fresh data later, run `python -m ingest.run --refresh`. Without it, the load reuses the downloaded files. Each load replaces what the graph held: shortages, products, ingredients, plants and suppliers that left the source are removed. `ingest.synth` creates the two synthetic hospitals.
 
 **5. Start the API**
 
@@ -128,7 +128,7 @@ cd backend
 python -m pytest -q
 ```
 
-65 tests run against the live graph. They cover data loading, strength matching, every query, tenant separation, the agent's guardrails, the trace cache and the API.
+67 tests. Most run against a live FalkorDB loaded with real FDA data, and the agent tests replace the AI model with a scripted stand-in. They cover data loading and reloading, strength matching, every query, tenant separation, the agent's guardrails, cancellation, the trace cache and the API. Because they use live FDA data, a test can fail if a record it relies on leaves the FDA list.
 
 ## How it works
 
@@ -141,10 +141,10 @@ Browser (Next.js) ──▶ FastAPI ──▶ agent loop ──▶ read-only gra
 - **Backend:** Python and FastAPI. Traces stream to the browser step by step as server-sent events.
 - **Agent:** a plain tool-calling loop on an OpenAI-compatible API, using Groq's `openai/gpt-oss-120b`. The model chooses which graph tools to call. The tools are read-only, and the hospital is bound on the server, so the model can't query another hospital's graph.
 - **Required steps:** the exposure, candidate and memory queries always run. If the model answers early, the server runs whatever it skipped before the trace is complete.
-- **Answer checks:** each list in the model's answer is checked against the query that owns it. An exposed product must come from the exposure query and a candidate from the candidate query, and a candidate's status always comes from the graph, never from the model. Anything else is dropped. The written summary is labeled as the model's.
+- **Answer checks:** each list in the model's answer is checked against the query that owns it. An exposed product must come from the exposure query and a candidate from the candidate query, and a candidate's status always comes from the graph, never from the model. Anything else is dropped. The written summary is labeled as the model's and isn't checked fact by fact, so the app asks you to check it against the lists.
 - **No model? No problem:** if the model is unavailable, the same queries run in a fixed order and the answer is built straight from the graph.
 - **Cache:** complete traces are saved in the hospital's graph and replayed until that hospital's decisions change or the data is reloaded.
-- **Limits:** at most two fresh traces run at once (`MAX_FRESH_TRACES`), never two for the same shortage, and a trace stops if the browser leaves.
+- **Limits:** at most two fresh traces run at once (`MAX_FRESH_TRACES`), never two for the same hospital and shortage. If the browser leaves, the trace stops before its next query or model call.
 - **Frontend:** Next.js and Tailwind.
 
 ## Graph data model
@@ -317,7 +317,7 @@ The only write in the product is a pharmacist's decision, `POST /api/decisions`.
 backend/
   fontrel/    API, agent loop, graph tools, trace cache
   ingest/     data loaders for openFDA, DailyMed and the DMF list, plus the synthetic hospitals
-  tests/      65 tests against a live FalkorDB
+  tests/      67 tests, most against a live FalkorDB
 frontend/
   src/app/        landing page and the app screens
   src/components/ shared header, logo and landing sections
@@ -346,7 +346,9 @@ Fontrel tracks 38 ingredients that hospitals often see in shortage, including bu
 - Plant data is only as complete as the FDA labels. Products with no listed plant are shown as "no site on file", never as safe.
 - Drug Master File suppliers are registrations. Fontrel doesn't claim anyone is actively supplying.
 - It doesn't rate countries or regions, because the public data has no reliable country field.
+- Fontrel records approve and reject decisions. It doesn't record outcomes or close an episode yet, so outcomes like "held 42 days" appear only on the synthetic seed records.
 - Groq's free tier allows about one fresh trace per minute. Saved traces replay instantly.
+- `npm audit` reports a high-severity advisory in `braces`, used only by the ESLint tooling. No patched version exists yet, and the shipped app has no reported vulnerabilities (`npm audit --omit=dev`).
 - The API allows browser calls only from `http://localhost:3100` by default. Set `CORS_ORIGINS` when you deploy it elsewhere.
 
 Fontrel works at a different layer from supply maps such as the [USP Medicine Supply Map](https://www.usp.org/supply-chain/medicine-supply-map). It takes the plant-level picture down to one hospital's formulary, proposes an action, and remembers what that hospital decided.

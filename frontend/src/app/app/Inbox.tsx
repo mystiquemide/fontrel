@@ -100,6 +100,9 @@ export function Inbox() {
                 <span className="em">touch your formulary.</span>
               </h1>
               <p className="mt-4 text-[19px] text-ink-2">{state.tenant.name}</p>
+              <p className="mt-2 max-w-[62ch] text-[15px] text-ink-3">
+                Every record here is on the FDA&rsquo;s current shortage list. The status column is the availability the FDA reports for that package, which can still be &ldquo;Available&rdquo;.
+              </p>
             </>
           ) : (
             <>

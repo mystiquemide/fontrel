@@ -43,3 +43,32 @@ def test_word_match_is_whole_word():
     from ingest.openfda import word_match
     assert word_match("EPINEPHRINE", "EPINEPHRINE BITARTRATE")
     assert not word_match("EPINEPHRINE", "NOREPINEPHRINE BITARTRATE")
+
+
+def test_reload_removes_facts_the_source_dropped():
+    from fontrel import graph
+    from ingest import load
+    g = graph.client().select_graph("test_reconcile")
+    try:
+        g.delete()
+    except Exception:
+        pass
+
+    def product(ndc, ings, labeler="Co"):
+        return {"product_ndc": ndc, "generic_name": ndc, "brand_name": "", "dosage_form": "INJECTION", "route": "IV",
+                "application_number": "", "spl_set_id": "", "labeler": labeler, "terms": [],
+                "ingredients": [{"name": n, "strength": "1 mg/mL"} for n in ings]}
+    site = lambda ndc, duns: {"product_ndc": ndc, "duns": duns, "name": duns, "country": "", "operation": "MANUFACTURE", "setid": "s"}
+
+    load.load_products(g, [product("A", ["X"]), product("B", ["Y"])])
+    load.load_made_at(g, [site("A", "111"), site("B", "222")], ["A", "B"])
+    # second load: A changed ingredient and lost its plant, B left the source
+    load.load_products(g, [product("A", ["Z"], labeler="NewCo")])
+    load.load_made_at(g, [], ["A"])
+    q = lambda c: g.query(c).result_set
+    assert q("MATCH (p:Product) RETURN collect(p.product_ndc)") == [[["A"]]]
+    assert q("MATCH (:Product {product_ndc:'A'})-[:CONTAINS]->(i) RETURN collect(i.name)") == [[["Z"]]]
+    assert q("MATCH (:Product {product_ndc:'A'})-[:LABELED_BY]->(l) RETURN collect(l.name)") == [[["NewCo"]]]
+    assert q("MATCH (:Product)-[m:MADE_AT|MANUFACTURED_AT]->() RETURN count(m)") == [[0]]
+    assert q("MATCH (s:Site) RETURN count(s)") == [[0]]
+    g.delete()

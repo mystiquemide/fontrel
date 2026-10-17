@@ -136,7 +136,7 @@ export function SourcesPage() {
           Plant groups touching {data ? shortName(data.tenant.name) : "your hospital"}
         </h2>
         <p className="mt-3 max-w-[62ch] text-ink-2">
-          Connected components: plants linked through the products they share. A problem at one plant can reach every product in its group.
+          Connected components: plants linked because some products list more than one of them. A shared link is a reason to review the whole group, not proof that a problem at one plant spreads.
         </p>
         <div className="mt-8">
           {!data ? (

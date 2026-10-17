@@ -25,9 +25,18 @@ def ensure_indexes(g: Graph) -> None:
 
 
 def load_products(g: Graph, rows: list[dict]) -> None:
+    """Products from this load replace what the graph held: a product that left the source is
+    removed, and each product's ingredient links are rewritten, so a changed ingredient never lingers.
+    Called only after the source was fully downloaded."""
+    g.query("MATCH (p:Product) WHERE NOT p.product_ndc IN $ndcs DETACH DELETE p",
+            {"ndcs": [r["product_ndc"] for r in rows]})
     q = """
     UNWIND $rows AS r
     MERGE (p:Product {product_ndc: r.product_ndc})
+    WITH p, r
+    OPTIONAL MATCH (p)-[old:CONTAINS|LABELED_BY]->()
+    DELETE old
+    WITH DISTINCT p, r
     SET p.generic_name = r.generic_name, p.brand_name = r.brand_name,
         p.dosage_form = r.dosage_form, p.route = r.route,
         p.application_number = r.application_number, p.spl_set_id = r.spl_set_id,
@@ -75,7 +84,11 @@ def stamp_ingest(g: Graph, source: str, records: int, fetched: str | None = None
     )
 
 
-def load_made_at(g: Graph, rows: list[dict]) -> None:
+def load_made_at(g: Graph, rows: list[dict], product_ndcs: list[str]) -> None:
+    """Plant links are rewritten for every product in this load, including products whose label
+    now lists no plant, so a plant that left a label never lingers."""
+    g.query("""MATCH (p:Product)-[m:MADE_AT|MANUFACTURED_AT]->(:Site) WHERE p.product_ndc IN $ndcs
+               DELETE m""", {"ndcs": product_ndcs})
     q = """
     UNWIND $rows AS r
     MATCH (p:Product {product_ndc: r.product_ndc})
@@ -90,9 +103,12 @@ def load_made_at(g: Graph, rows: list[dict]) -> None:
     # relationship type, not property) ignore packing, relabeling and testing sites.
     g.query("""MATCH (p:Product)-[m:MADE_AT {operation:'MANUFACTURE'}]->(s:Site)
                MERGE (p)-[:MANUFACTURED_AT]->(s)""")
+    g.query("MATCH (s:Site) WHERE NOT (s)<-[:MADE_AT]-() DETACH DELETE s")
 
 
 def load_candidate_suppliers(g: Graph, rows: list[dict], weight: float) -> None:
+    """Supplier links are rebuilt from scratch on each load. Suppliers left with no link are removed."""
+    g.query("MATCH ()-[c:CANDIDATE_SUPPLIER]->() DELETE c")
     """Link DMF holders to every ingredient whose name contains the matched term as a whole word."""
     from .openfda import word_match
     names = [r[0] for r in g.query("MATCH (i:Ingredient) RETURN i.name").result_set]
@@ -110,6 +126,8 @@ def load_candidate_suppliers(g: Graph, rows: list[dict], weight: float) -> None:
     """
     for b in _batched(rows):
         g.query(q, {"rows": b, "weight": weight})
+    g.query("MATCH (s:Supplier) WHERE NOT (s)-[:CANDIDATE_SUPPLIER]->() DETACH DELETE s")
+    g.query("MATCH (i:Ingredient) WHERE NOT ()-[:CONTAINS]->(i) AND NOT ()-[:CANDIDATE_SUPPLIER]->(i) DETACH DELETE i")
 
 
 def _strength(s: str) -> str:

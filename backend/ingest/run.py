@@ -36,7 +36,7 @@ def main(reset: bool = False, refresh: bool = False) -> None:
     print(f"shortages: {len(shortages)} current, {linked} linked to a product")
 
     made_at = dailymed.made_at_rows(products)
-    load.load_made_at(g, made_at)
+    load.load_made_at(g, made_at, [p["product_ndc"] for p in products])
     load.stamp_ingest(g, "dailymed_spl", len(made_at), http.fetched_at("dailymed"))
     print(f"made_at rows: {len(made_at)}")
 
