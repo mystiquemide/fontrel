@@ -247,3 +247,17 @@ def test_rejecting_a_candidate_moves_it_down_next_time(cleanup):
     assert after.index(top["product_ndc"]) > max(after.index(p) for p in peers)
     row = next(r for r in tools.find_substitutes("mercy", sid).rows if r["product_ndc"] == top["product_ndc"])
     assert row["prior_decision"]["action"] == "rejected"
+
+
+def test_demo_reset_keeps_seed_and_restores_memory_version():
+    from fontrel import cache
+    from ingest import reset_demo
+    before = cache.memory_version("mercy")
+    sid = anchor()
+    sub = next(r["id"] for r in c.get(f"/api/graph/subgraph?tenant=mercy&shortage_id={sid}").json()["nodes"]
+               if r.get("role") == "substitute")
+    c.post("/api/decisions", json={"tenant": "mercy", "shortage_id": sid, "substitute_ndc": sub, "action": "rejected"})
+    assert cache.memory_version("mercy") != before
+    assert reset_demo.reset("mercy") == 1
+    assert cache.memory_version("mercy") == before
+    assert len(c.get("/api/memory?tenant=mercy").json()) == 2

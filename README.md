@@ -134,7 +134,7 @@ cd backend
 python -m pytest -q
 ```
 
-67 tests. Most run against a live FalkorDB loaded with real FDA data, and the agent tests replace the AI model with a scripted stand-in. They cover data loading and reloading, strength matching, every query, tenant separation, the agent's guardrails, cancellation, the trace cache and the API. Because they use live FDA data, a test can fail if a record it relies on leaves the FDA list.
+68 tests. Most run against a live FalkorDB loaded with real FDA data, and the agent tests replace the AI model with a scripted stand-in. They cover data loading and reloading, strength matching, every query, tenant separation, the agent's guardrails, cancellation, the trace cache and the API. Because they use live FDA data, a test can fail if a record it relies on leaves the FDA list.
 
 ## Deploy
 
@@ -176,6 +176,12 @@ docker compose -f deploy/docker-compose.coolify.yml --env-file .env up -d --buil
 docker compose -f deploy/docker-compose.coolify.yml exec api sh -c "python -m ingest.run && python -m ingest.synth"
 ```
 
+For a public demo, clear visitor decisions nightly with a cron entry on the server (run `crontab -e`, use the compose file you deployed with):
+
+```
+0 3 * * * cd /root/fontrel && docker compose -f deploy/docker-compose.yml exec -T api python -m ingest.reset_demo
+```
+
 ### Frontend on Vercel
 
 Import the repository in Vercel, set the root directory to `frontend`, and add these environment variables:
@@ -186,6 +192,13 @@ Import the repository in Vercel, set the root directory to `frontend`, and add t
 | `SITE_URL` | your Vercel URL, used for link previews |
 
 The app forwards `/api/*` to `BACKEND_URL`, so the browser only ever talks to Vercel.
+
+## Why FalkorDB
+
+- **One graph per hospital.** Each hospital's formulary, decisions and saved traces live in their own FalkorDB graph (`tenant_mercy`, `tenant_lakeside`). The shared `supply` graph holds public FDA data, and the two join on product NDC. Separating hospitals takes no filtering code, and no query can reach across them.
+- **Multi-hop paths are the product.** Shortage, product, plant, then every other product at that plant is one Cypher pattern. In a table database it's a chain of joins across 4,476 products and 7,149 label-to-plant links.
+- **Graph algorithms in the database.** `algo.pageRank` ranks plants by how many products depend on them, and `algo.WCC` groups plants that share products. Both run inside FalkorDB under its 1,000 ms query timeout.
+- **Every step is visible.** The trace screen shows each Cypher query, its row count and its time in FalkorDB.
 
 ## How it works
 
@@ -262,19 +275,6 @@ RETURN DISTINCT other.product_ndc AS product_ndc, other.generic_name AS product,
 ORDER BY already_in_shortage, labeler
 ```
 
-**Q2. Formulary products sharing an ingredient, with registered suppliers**
-
-```cypher
-MATCH (s:Shortage {id: $sid})-[:AFFECTS]->(p:Product)-[:CONTAINS]->(i:Ingredient)
-OPTIONAL MATCH (i)<-[c:CANDIDATE_SUPPLIER]-(sup:Supplier)
-WITH p, i, count(DISTINCT sup) AS supplier_count, collect(DISTINCT c.dmf)[0..5] AS sample_dmfs
-MATCH (i)<-[:CONTAINS]-(other:Product)
-WHERE other.product_ndc IN $formulary AND other.product_ndc <> p.product_ndc
-RETURN i.name AS ingredient, supplier_count, sample_dmfs,
-       collect(DISTINCT {product_ndc: other.product_ndc, product: other.generic_name,
-                         labeler: other.labeler}) AS formulary_products
-```
-
 **Q3. Candidate alternatives, compared with the shortage product's plants**
 
 ```cypher
@@ -303,6 +303,22 @@ RETURN substitute_ndc, last.action AS action, last.reason AS reason, last.outcom
 ```
 
 Each candidate is then labeled **shares a plant** (a shared plant was found), **no shared plant on record** (both products list manufacturing plants and none overlap) or **plant overlap unknown** (either label lists no plant). Within each group, candidates the hospital rejected before are listed lower.
+
+<details>
+<summary>Q2, Q4, Q5 and Q6: shared ingredients, plant ranking, plant groups and past decisions</summary>
+
+**Q2. Formulary products sharing an ingredient, with registered suppliers**
+
+```cypher
+MATCH (s:Shortage {id: $sid})-[:AFFECTS]->(p:Product)-[:CONTAINS]->(i:Ingredient)
+OPTIONAL MATCH (i)<-[c:CANDIDATE_SUPPLIER]-(sup:Supplier)
+WITH p, i, count(DISTINCT sup) AS supplier_count, collect(DISTINCT c.dmf)[0..5] AS sample_dmfs
+MATCH (i)<-[:CONTAINS]-(other:Product)
+WHERE other.product_ndc IN $formulary AND other.product_ndc <> p.product_ndc
+RETURN i.name AS ingredient, supplier_count, sample_dmfs,
+       collect(DISTINCT {product_ndc: other.product_ndc, product: other.generic_name,
+                         labeler: other.labeler}) AS formulary_products
+```
 
 **Q4. Plants ranked by dependence** (PageRank)
 
@@ -350,7 +366,9 @@ RETURN e.id AS episode, e.shortage_label AS episode_label, e.opened AS opened, e
 ORDER BY e.opened DESC, d.id
 ```
 
-The only write in the product is a pharmacist's decision, `POST /api/decisions`. It uses `MERGE`, so saving the same decision twice updates one node instead of creating two.
+</details>
+
+The only write in the product is a pharmacist's decision, `POST /api/decisions`. It uses `MERGE`, so saving the same decision twice updates one node instead of creating two. To clear decisions made through the app and return both hospitals to their seeded memory, run `python -m ingest.reset_demo`. Saved traces stay valid after a reset.
 
 ## API
 
@@ -374,7 +392,7 @@ The only write in the product is a pharmacist's decision, `POST /api/decisions`.
 backend/
   fontrel/    API, agent loop, graph tools, trace cache
   ingest/     data loaders for openFDA, DailyMed and the DMF list, plus the synthetic hospitals
-  tests/      67 tests, most against a live FalkorDB
+  tests/      68 tests, most against a live FalkorDB
 frontend/
   src/app/        landing page and the app screens
   src/components/ shared header, logo and landing sections
@@ -409,6 +427,7 @@ Counts change slightly whenever the data is reloaded.
 
 - Fontrel supports a pharmacist's decision. It doesn't choose a drug or a dose, and a candidate alternative is not a confirmed therapeutic equivalent. The FDA [Orange Book](https://www.fda.gov/drugs/development-approval-process-drugs/orange-book-preface) sets that bar.
 - A shared plant means shared exposure to review. It doesn't prove the plant caused the shortage or that other products will run short.
+- The public demo is shared, so a decision one visitor saves is visible to the next. The live server clears app-made decisions every night with `ingest.reset_demo`.
 - There is no sign-in. Each hospital's data lives in its own graph and the agent only reads the hospital it was started for, but anyone using this demo can switch hospitals. A real deployment needs sign-in before each hospital's decisions are private.
 - It doesn't forecast shortages. It works from what is filed today.
 - Plant data is only as complete as the FDA labels. Products with no listed plant are shown as "no site on file", never as safe.

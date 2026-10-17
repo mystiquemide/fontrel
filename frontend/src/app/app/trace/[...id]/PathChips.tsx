@@ -1,6 +1,6 @@
 import { sortExposed, type ExposedRow, type Step } from "@/lib/api";
 
-type Chip = { label: string; title: string; sub: string; tone: "ink" | "exposed" | "muted" };
+type Chip = { label: string; title: string; sub: string; tone: "ink" | "exposed" | "muted"; href?: string };
 
 function title(s: string) {
   return s.replace(/\w\S*/g, (w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
@@ -35,6 +35,9 @@ function buildChips(steps: Step[]): (Chip | null)[] {
             ? `and ${products.size - 1} more on your formulary, ${others.length} from other companies`
             : `NDC ${lead.product_ndc}`,
         tone: "exposed",
+        href: lead.exposed_label_setid
+          ? `https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=${lead.exposed_label_setid}`
+          : undefined,
       }
     : { label: "Also exposed", title: "Nothing else on your formulary", sub: "No other product shares this plant", tone: "muted" };
   return chips;
@@ -64,6 +67,11 @@ export function PathChips({ steps, running }: { steps: Step[]; running: boolean 
                 <p className={`label ${c.tone === "exposed" ? "!text-exposed" : ""}`}>{c.label}</p>
                 <p className="mt-1.5 font-medium leading-snug">{c.title}</p>
                 <p className="mt-1 font-mono text-[13px] text-ink-3">{c.sub}</p>
+                {c.href && (
+                  <a className="link mt-2 inline-block text-[14px]" href={c.href} target="_blank" rel="noreferrer">
+                    Check this plant on its FDA label<span className="sr-only"> (opens DailyMed in a new tab)</span>
+                  </a>
+                )}
               </div>
             ) : (
               <div className={`rounded-[12px] border-[1.5px] border-dashed border-line p-4 ${running ? "motion-safe:animate-pulse" : ""}`}>

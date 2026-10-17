@@ -145,7 +145,7 @@ export function Trace() {
         <div className="mt-8 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <p className="label">
-              {head.s.availability} · Updated {formatDate(head.s.updated)} · Synthetic hospital
+              On the FDA shortage list · FDA status: {head.s.availability} · Updated {formatDate(head.s.updated)} · Synthetic hospital
             </p>
             <h1 className="h2 mt-3">{head.s.shortage}</h1>
             <p className="mt-3 text-ink-2">
