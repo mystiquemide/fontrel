@@ -43,158 +43,6 @@ The app has four screens: a shortage inbox, the trace for one shortage, the hosp
 - Agents That Act on Connected Data
 - Agent Memory and Coordination
 
-## Run it locally
-
-This takes about 10 minutes on a fresh machine. Most of that is the first data download.
-
-### What you need
-
-| Tool | Version | Get it |
-|---|---|---|
-| Docker | Any recent version, with Docker Compose | [docker.com/get-started](https://www.docker.com/get-started/) |
-| Python | 3.11 or newer | [python.org/downloads](https://www.python.org/downloads/) |
-| Node.js | 20 or newer | [nodejs.org](https://nodejs.org/) |
-| Groq API key | Optional, free | [console.groq.com/keys](https://console.groq.com/keys) |
-
-Without a Groq key the app still works. Every list, path and graph comes from FalkorDB. You just won't get the short written summary at the top of each trace.
-
-### Steps
-
-Run these from a terminal. On Windows, use WSL or Git Bash. The one Windows-specific difference is noted in step 3.
-
-**1. Get the code and start FalkorDB**
-
-```bash
-git clone https://github.com/mystiquemide/fontrel.git
-cd fontrel
-docker compose up -d
-```
-
-FalkorDB now runs on port 6379, reachable only from your machine. Its browser UI is at http://localhost:3000 if you want to look at the graph directly.
-
-**2. Add your settings**
-
-```bash
-cp .env.example .env
-```
-
-Open `.env` and paste your Groq key after `GROQ_API_KEY=`. Leave it empty to run without the written summary.
-
-**3. Install the backend**
-
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r backend/requirements.txt
-```
-
-On Windows PowerShell, activate with `.venv\Scripts\Activate.ps1` instead.
-
-**4. Load the data**
-
-```bash
-cd backend
-python -m ingest.run
-python -m ingest.synth
-```
-
-`ingest.run` downloads current FDA data and builds the supply graph. It takes about two minutes and caches the files in `data/raw`, so later runs are faster. To pull fresh data later, run `python -m ingest.run --refresh`. Without it, the load reuses the downloaded files. Each load replaces what the graph held: shortages, products, ingredients, plants and suppliers that left the source are removed. `ingest.synth` creates the two synthetic hospitals.
-
-**5. Start the API**
-
-```bash
-uvicorn fontrel.api:app --port 8000
-```
-
-Leave this running. Check it at http://localhost:8000/api/health.
-
-**6. Start the app** (in a second terminal)
-
-```bash
-cd fontrel/frontend
-npm install
-npm run dev
-```
-
-Open http://localhost:3100. Select **Open the app**, then select **Trace** on any shortage.
-
-### If something goes wrong
-
-| What you see | What to do |
-|---|---|
-| `Cannot connect to the Docker daemon` | Start Docker Desktop, or run `sudo systemctl start docker` on Linux, then run `docker compose up -d` again. |
-| The API says `falkordb: false` | FalkorDB isn't running. Run `docker compose up -d` from the project folder. |
-| The app shows "Fontrel cannot reach its graph database" | The API isn't running. Start it as in step 5. |
-| The inbox shows no shortages | The data isn't loaded. Run step 4. |
-| Traces say "The AI model is busy" | No Groq key, or you hit Groq's free rate limit. The lists still come straight from the graph. Wait a minute and select **Run a fresh trace**. |
-| `Port 8000 is already in use` | Start the API on another port, for example `--port 8001`, and start the app with `BACKEND_URL=http://localhost:8001 npm run dev`. |
-
-### Run the tests
-
-```bash
-cd backend
-python -m pytest -q
-```
-
-68 tests. Most run against a live FalkorDB loaded with real FDA data, and the agent tests replace the AI model with a scripted stand-in. They cover data loading and reloading, strength matching, every query, tenant separation, the agent's guardrails, cancellation, the trace cache and the API. Because they use live FDA data, a test can fail if a record it relies on leaves the FDA list.
-
-## Deploy
-
-The frontend runs on Vercel. The backend (FalkorDB, the API and Caddy for HTTPS) runs on any Linux server with Docker, such as a $5 to $12 VPS with 2 GB of RAM.
-
-### Backend on a server
-
-You need a hostname for the API. If you don't have a domain, `<server-ip>.sslip.io` works, for example `203.0.113.7.sslip.io`. Open ports 80 and 443.
-
-```bash
-git clone https://github.com/mystiquemide/fontrel.git && cd fontrel
-cp .env.example .env    # add GROQ_API_KEY, API_DOMAIN and CORS_ORIGINS (see below)
-docker compose -f deploy/docker-compose.yml --env-file .env up -d --build
-docker compose -f deploy/docker-compose.yml exec api sh -c "python -m ingest.run && python -m ingest.synth"
-curl https://$API_DOMAIN/api/health
-```
-
-Settings for the server's `.env`:
-
-| Variable | Example |
-|---|---|
-| `GROQ_API_KEY` | your key |
-| `API_DOMAIN` | `203.0.113.7.sslip.io` |
-| `CORS_ORIGINS` | `https://your-app.vercel.app` |
-
-FalkorDB and the API are only reachable inside Docker. Caddy is the only public entry point and gets the HTTPS certificate on its own.
-
-fda.gov blocks some server IPs. If the load prints `skipped the FDA Drug Master File list`, download the file in a browser from the link it prints, copy it to the server, and load it:
-
-```bash
-docker compose -f deploy/docker-compose.yml cp dmf-list.xlsx api:/tmp/dmf.xlsx
-docker compose -f deploy/docker-compose.yml exec api python -m ingest.dmf_file /tmp/dmf.xlsx
-```
-
-If the server already runs Coolify, its Traefik proxy holds ports 80 and 443. Use the Coolify file instead, which skips Caddy and lets Traefik route `API_DOMAIN` to the API and issue the certificate:
-
-```bash
-docker compose -f deploy/docker-compose.coolify.yml --env-file .env up -d --build
-docker compose -f deploy/docker-compose.coolify.yml exec api sh -c "python -m ingest.run && python -m ingest.synth"
-```
-
-For a public demo, clear visitor decisions nightly with a cron entry on the server (run `crontab -e`, use the compose file you deployed with):
-
-```
-0 3 * * * cd /root/fontrel && docker compose -f deploy/docker-compose.yml exec -T api python -m ingest.reset_demo
-```
-
-### Frontend on Vercel
-
-Import the repository in Vercel, set the root directory to `frontend`, and add these environment variables:
-
-| Variable | Value |
-|---|---|
-| `BACKEND_URL` | `https://<API_DOMAIN>` |
-| `SITE_URL` | your Vercel URL, used for link previews |
-
-The app forwards `/api/*` to `BACKEND_URL`, so the browser only ever talks to Vercel.
-
 ## Why FalkorDB
 
 - **One graph per hospital.** Each hospital's formulary, decisions and saved traces live in their own FalkorDB graph (`tenant_mercy`, `tenant_lakeside`). The shared `supply` graph holds public FDA data, and the two join on product NDC. Separating hospitals takes no filtering code, and no query can reach across them.
@@ -393,35 +241,6 @@ ORDER BY e.opened DESC, d.id
 
 The only write in the product is a pharmacist's decision, `POST /api/decisions`. It uses `MERGE`, so saving the same decision twice updates one node instead of creating two. To clear decisions made through the app and return both hospitals to their seeded memory, run `python -m ingest.reset_demo`. Saved traces stay valid after a reset.
 
-## API
-
-| Method | Path | What it returns |
-|---|---|---|
-| GET | `/api/health` | Database status, node counts, and when each source was downloaded and loaded |
-| GET | `/api/tenants` | The hospitals |
-| GET | `/api/shortages?tenant=` | Current FDA shortages on that hospital's formulary |
-| POST | `/api/trace` | A trace, streamed step by step |
-| GET | `/api/graph/subgraph?tenant=&shortage_id=` | Up to 25 nodes for the graph view |
-| POST | `/api/decisions` | Saves an approve or reject |
-| GET | `/api/recall?tenant=&shortage_id=` | The past decisions a trace would recall |
-| GET | `/api/memory?tenant=` | Every episode and decision for a hospital |
-| GET | `/api/sources?tenant=` | The PageRank plant ranking and the plant groups |
-| GET | `/api/ingredients` | Shortage and supplier counts per ingredient |
-| GET | `/api/anchor?tenant=` | A current shortage with exposure across companies |
-
-## Project layout
-
-```
-backend/
-  fontrel/    API, agent loop, graph tools, trace cache
-  ingest/     data loaders for openFDA, DailyMed and the DMF list, plus the synthetic hospitals
-  tests/      68 tests, most against a live FalkorDB
-frontend/
-  src/app/        landing page and the app screens
-  src/components/ shared header, logo and landing sections
-docker-compose.yml  FalkorDB with append-only persistence, bound to localhost
-```
-
 ## Data
 
 | Source | Used for | Notes |
@@ -462,6 +281,187 @@ Counts change slightly whenever the data is reloaded.
 - The API allows browser calls only from `http://localhost:3100` by default. Set `CORS_ORIGINS` when you deploy it elsewhere.
 
 Fontrel works at a different layer from supply maps such as the [USP Medicine Supply Map](https://www.usp.org/supply-chain/medicine-supply-map). It takes the plant-level picture down to one hospital's formulary, proposes an action, and remembers what that hospital decided.
+
+## API
+
+| Method | Path | What it returns |
+|---|---|---|
+| GET | `/api/health` | Database status, node counts, and when each source was downloaded and loaded |
+| GET | `/api/tenants` | The hospitals |
+| GET | `/api/shortages?tenant=` | Current FDA shortages on that hospital's formulary |
+| POST | `/api/trace` | A trace, streamed step by step |
+| GET | `/api/graph/subgraph?tenant=&shortage_id=` | Up to 25 nodes for the graph view |
+| POST | `/api/decisions` | Saves an approve or reject |
+| GET | `/api/recall?tenant=&shortage_id=` | The past decisions a trace would recall |
+| GET | `/api/memory?tenant=` | Every episode and decision for a hospital |
+| GET | `/api/sources?tenant=` | The PageRank plant ranking and the plant groups |
+| GET | `/api/ingredients` | Shortage and supplier counts per ingredient |
+| GET | `/api/anchor?tenant=` | A current shortage with exposure across companies |
+
+## Project layout
+
+```
+backend/
+  fontrel/    API, agent loop, graph tools, trace cache
+  ingest/     data loaders for openFDA, DailyMed and the DMF list, plus the synthetic hospitals
+  tests/      68 tests, most against a live FalkorDB
+frontend/
+  src/app/        landing page and the app screens
+  src/components/ shared header, logo and landing sections
+docker-compose.yml  FalkorDB with append-only persistence, bound to localhost
+```
+
+## Run it locally
+
+This takes about 10 minutes on a fresh machine. Most of that is the first data download.
+
+### What you need
+
+| Tool | Version | Get it |
+|---|---|---|
+| Docker | Any recent version, with Docker Compose | [docker.com/get-started](https://www.docker.com/get-started/) |
+| Python | 3.11 or newer | [python.org/downloads](https://www.python.org/downloads/) |
+| Node.js | 20 or newer | [nodejs.org](https://nodejs.org/) |
+| Groq API key | Optional, free | [console.groq.com/keys](https://console.groq.com/keys) |
+
+Without a Groq key the app still works. Every list, path and graph comes from FalkorDB. You just won't get the short written summary at the top of each trace.
+
+### Steps
+
+Run these from a terminal. On Windows, use WSL or Git Bash. The one Windows-specific difference is noted in step 3.
+
+**1. Get the code and start FalkorDB**
+
+```bash
+git clone https://github.com/mystiquemide/fontrel.git
+cd fontrel
+docker compose up -d
+```
+
+FalkorDB now runs on port 6379, reachable only from your machine. Its browser UI is at http://localhost:3000 if you want to look at the graph directly.
+
+**2. Add your settings**
+
+```bash
+cp .env.example .env
+```
+
+Open `.env` and paste your Groq key after `GROQ_API_KEY=`. Leave it empty to run without the written summary.
+
+**3. Install the backend**
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r backend/requirements.txt
+```
+
+On Windows PowerShell, activate with `.venv\Scripts\Activate.ps1` instead.
+
+**4. Load the data**
+
+```bash
+cd backend
+python -m ingest.run
+python -m ingest.synth
+```
+
+`ingest.run` downloads current FDA data and builds the supply graph. It takes about two minutes and caches the files in `data/raw`, so later runs are faster. To pull fresh data later, run `python -m ingest.run --refresh`. Without it, the load reuses the downloaded files. Each load replaces what the graph held: shortages, products, ingredients, plants and suppliers that left the source are removed. `ingest.synth` creates the two synthetic hospitals.
+
+**5. Start the API**
+
+```bash
+uvicorn fontrel.api:app --port 8000
+```
+
+Leave this running. Check it at http://localhost:8000/api/health.
+
+**6. Start the app** (in a second terminal)
+
+```bash
+cd fontrel/frontend
+npm install
+npm run dev
+```
+
+Open http://localhost:3100. Select **Open the app**, then select **Trace** on any shortage.
+
+### If something goes wrong
+
+| What you see | What to do |
+|---|---|
+| `Cannot connect to the Docker daemon` | Start Docker Desktop, or run `sudo systemctl start docker` on Linux, then run `docker compose up -d` again. |
+| The API says `falkordb: false` | FalkorDB isn't running. Run `docker compose up -d` from the project folder. |
+| The app shows "Fontrel cannot reach its graph database" | The API isn't running. Start it as in step 5. |
+| The inbox shows no shortages | The data isn't loaded. Run step 4. |
+| Traces say "The AI model is busy" | No Groq key, or you hit Groq's free rate limit. The lists still come straight from the graph. Wait a minute and select **Run a fresh trace**. |
+| `Port 8000 is already in use` | Start the API on another port, for example `--port 8001`, and start the app with `BACKEND_URL=http://localhost:8001 npm run dev`. |
+
+### Run the tests
+
+```bash
+cd backend
+python -m pytest -q
+```
+
+68 tests. Most run against a live FalkorDB loaded with real FDA data, and the agent tests replace the AI model with a scripted stand-in. They cover data loading and reloading, strength matching, every query, tenant separation, the agent's guardrails, cancellation, the trace cache and the API. Because they use live FDA data, a test can fail if a record it relies on leaves the FDA list.
+
+## Deploy
+
+The frontend runs on Vercel. The backend (FalkorDB, the API and Caddy for HTTPS) runs on any Linux server with Docker, such as a $5 to $12 VPS with 2 GB of RAM.
+
+### Backend on a server
+
+You need a hostname for the API. If you don't have a domain, `<server-ip>.sslip.io` works, for example `203.0.113.7.sslip.io`. Open ports 80 and 443.
+
+```bash
+git clone https://github.com/mystiquemide/fontrel.git && cd fontrel
+cp .env.example .env    # add GROQ_API_KEY, API_DOMAIN and CORS_ORIGINS (see below)
+docker compose -f deploy/docker-compose.yml --env-file .env up -d --build
+docker compose -f deploy/docker-compose.yml exec api sh -c "python -m ingest.run && python -m ingest.synth"
+curl https://$API_DOMAIN/api/health
+```
+
+Settings for the server's `.env`:
+
+| Variable | Example |
+|---|---|
+| `GROQ_API_KEY` | your key |
+| `API_DOMAIN` | `203.0.113.7.sslip.io` |
+| `CORS_ORIGINS` | `https://your-app.vercel.app` |
+
+FalkorDB and the API are only reachable inside Docker. Caddy is the only public entry point and gets the HTTPS certificate on its own.
+
+fda.gov blocks some server IPs. If the load prints `skipped the FDA Drug Master File list`, download the file in a browser from the link it prints, copy it to the server, and load it:
+
+```bash
+docker compose -f deploy/docker-compose.yml cp dmf-list.xlsx api:/tmp/dmf.xlsx
+docker compose -f deploy/docker-compose.yml exec api python -m ingest.dmf_file /tmp/dmf.xlsx
+```
+
+If the server already runs Coolify, its Traefik proxy holds ports 80 and 443. Use the Coolify file instead, which skips Caddy and lets Traefik route `API_DOMAIN` to the API and issue the certificate:
+
+```bash
+docker compose -f deploy/docker-compose.coolify.yml --env-file .env up -d --build
+docker compose -f deploy/docker-compose.coolify.yml exec api sh -c "python -m ingest.run && python -m ingest.synth"
+```
+
+For a public demo, clear visitor decisions nightly with a cron entry on the server (run `crontab -e`, use the compose file you deployed with):
+
+```
+0 3 * * * cd /root/fontrel && docker compose -f deploy/docker-compose.yml exec -T api python -m ingest.reset_demo
+```
+
+### Frontend on Vercel
+
+Import the repository in Vercel, set the root directory to `frontend`, and add these environment variables:
+
+| Variable | Value |
+|---|---|
+| `BACKEND_URL` | `https://<API_DOMAIN>` |
+| `SITE_URL` | your Vercel URL, used for link previews |
+
+The app forwards `/api/*` to `BACKEND_URL`, so the browser only ever talks to Vercel.
 
 ## Built with AI assistance
 
