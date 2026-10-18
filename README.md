@@ -204,10 +204,31 @@ The app forwards `/api/*` to `BACKEND_URL`, so the browser only ever talks to Ve
 
 ## How it works
 
-```
-Browser (Next.js) ──▶ FastAPI ──▶ agent loop ──▶ read-only graph tools ──▶ FalkorDB
-                          │                                                   ▲
-                          └──── approve / reject (the only write) ────────────┘
+```mermaid
+flowchart LR
+    user["Pharmacist<br/>(browser)"] --> web["Next.js app<br/>Vercel"]
+    web -- "/api/* over HTTPS" --> api["FastAPI<br/>trace stream (SSE)"]
+    api --> agent["Agent loop"]
+    agent <-- "tool calls" --> llm["Groq<br/>gpt-oss-120b"]
+    agent --> tools["Read-only<br/>graph tools"]
+    api -- "approve / reject<br/>(the only write)" --> tenant
+
+    subgraph falkor["FalkorDB"]
+        supply[("supply graph<br/>products, plants,<br/>shortages, suppliers")]
+        tenant[("tenant_&lt;hospital&gt; graphs<br/>formulary, decisions,<br/>saved traces")]
+    end
+
+    tools --> supply
+    tools --> tenant
+
+    subgraph sources["Public data (ingest)"]
+        ofda["openFDA<br/>shortages + NDC"]
+        dm["DailyMed<br/>label plants"]
+        dmf["FDA Drug<br/>Master Files"]
+    end
+    ofda --> supply
+    dm --> supply
+    dmf --> supply
 ```
 
 - **Backend:** Python and FastAPI. Traces stream to the browser step by step as server-sent events.
